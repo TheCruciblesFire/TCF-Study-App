@@ -1,3 +1,4 @@
+import { selectSupportingSources } from './relevance.js';
 import { chooseContextReference } from './context.js';
 import express from 'express';
 import { randomUUID, createHash } from 'node:crypto';
@@ -83,11 +84,13 @@ export function createApp(config, overrides = {}) {
           if (!supporting) throw new AppError(502, 'INVALID_REFERENCE', 'A supporting Scripture reference could not be verified. Please try again.');
           if (!references.includes(supporting.reference)) references.push(supporting.reference);
         }
-        const contextReference = config.APP_MODE === 'live' ? chooseContextReference(main.reference, references) : null;
-        const sources = [];
-        // Sequential requests limit pressure on Bible API quotas. The optional
-        // preceding-context excerpt consumes the unused third source slot.
-        for (const reference of references) sources.push({ ...await providers.bible(reference), id: `S${sources.length + 1}`, role: sources.length ? 'Supporting Scripture' : 'Main passage' });
+        const sources = [{ ...await providers.bible(references[0]), id: 'S1', role: 'Main passage' }];
+        // The provider might return identical text for two differently named
+        // references; don't present duplicate content as corroboration.
+        const retrievedSupport = [];
+        for (const reference of references.slice(1)) retrievedSupport.push({ ...await providers.bible(reference), role: 'Supporting Scripture' });
+        for (const source of selectSupportingSources(sources[0], retrievedSupport)) sources.push({ ...source, id: `S${sources.length + 1}` });
+        const contextReference = config.APP_MODE === 'live' ? chooseContextReference(main.reference, sources.map(s => s.reference)) : null;
         if (contextReference) {
           // Context is helpful but never permitted to block an otherwise valid
           // study when the provider cannot retrieve the excerpt.
