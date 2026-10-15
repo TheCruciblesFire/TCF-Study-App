@@ -9,11 +9,11 @@ import { parseStrongId, validateLexiconEntry } from '../server/lexicon.js';
 export function importLexicon(tsv, manifest) {
   if (!manifest || manifest.license !== 'CC BY 4.0' ||
       !/^https:\/\/github\.com\/STEPBible\/STEPBible-Data\//.test(manifest.sourceUrl ?? '') ||
-      !/^[0-9a-f]{40}$/.test(manifest.gitBlobSha ?? '') ||
+      !/^[0-9a-f]{64}$/.test(manifest.normalizedSha256 ?? '') ||
       !/^[0-9a-f]{40}$/.test(manifest.commit ?? '')) throw Error('Pinned source, commit and license required');
   const input = Buffer.from(tsv, 'utf8');
-  const gitHash = createHash('sha1').update(`blob ${input.length}\0`).update(input).digest('hex');
-  if (gitHash !== manifest.gitBlobSha) throw Error('Source bytes do not match pinned Git blob SHA');
+  const hash = createHash('sha256').update(input).digest('hex');
+  if (hash !== manifest.normalizedSha256) throw Error('Normalized export bytes do not match pinned SHA256');
   const lines = tsv.replace(/^\uFEFF/, '').split(/\r?\n/);
   const header = lines.shift();
   if (header !== 'id\tlemma\tgloss') throw Error('Expected reviewed normalized TSV header id, lemma, gloss');
@@ -30,7 +30,7 @@ export function importLexicon(tsv, manifest) {
     rows[id] = entry;
   }
   if (!Object.keys(rows).length || Object.keys(rows).length > 16000) throw Error('Unexpected entry count');
-  return { metadata: { sourceUrl: manifest.sourceUrl, commit: manifest.commit, gitBlobSha: manifest.gitBlobSha, license: manifest.license, attribution: 'STEP Bible — https://www.stepbible.org/', modified: true, note: 'Normalized export; review differences and retain source notices.' }, entries: rows };
+  return { metadata: { sourceUrl: manifest.sourceUrl, commit: manifest.commit, normalizedSha256: manifest.normalizedSha256, license: manifest.license, attribution: 'STEP Bible — https://www.stepbible.org/', modified: true, note: 'Normalized export; review differences and retain source notices.' }, entries: rows };
 }
 if (process.argv[1]?.endsWith('/import-step-lexicon.js')) {
   const [inputPath, manifestPath, outputPath] = process.argv.slice(2);
