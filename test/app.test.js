@@ -231,7 +231,10 @@ test('citation regression: chapter labels accepted, out-of-range verses and URLs
   ];
   const copy = () => structuredClone(original);
   const valid = copy();
-  for (const section of [valid.context, ...valid.observations, ...valid.interpretation, ...valid.theology, ...valid.connections, ...valid.application]) section.evidence = ['S1'];
+  for (const section of [valid.context, ...valid.observations, ...valid.interpretation, ...valid.theology, ...valid.connections, ...valid.application]) { section.evidence = ['S1']; section.text = 'A conclusion grounded in the supplied excerpt.'; }
+  valid.title = 'A passage study';
+  valid.furtherStudy = ['What does this passage emphasize?'];
+  valid.caveat = '';
   // A chapter *label* matches a retrieved excerpt; it does not establish all chapter claims.
   valid.context.text = 'The warning appears in Hebrews 6; compare the retrieved verses in Romans 8.';
   assert.doesNotThrow(() => validateStudy(valid, sources));
