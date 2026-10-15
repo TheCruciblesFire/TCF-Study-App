@@ -27,7 +27,11 @@ export function loadLexicalIndexes(directory) {
 }
 
 export function lookupStrong(databases, input) {
-  // Accept display-style zero padding at the HTTP boundary, while keeping\n  // canonical database keys and parseStrongId() strict.\n  const text = typeof input === 'string' ? input.trim() : '';\n  const padded = /^([GH])0*([1-9][0-9]{0,4})$/i.exec(text);\n  const id = parseStrongId(padded ? padded[1] + padded[2] : text);
+  // Accept display-style zero padding at the HTTP boundary, while keeping
+  // canonical database keys and parseStrongId() strict.
+  const text = typeof input === 'string' ? input.trim() : '';
+  const padded = /^([GH])0*([1-9][0-9]{0,4})$/i.exec(text);
+  const id = parseStrongId(padded ? padded[1] + padded[2] : text);
   if (!id) return { error: 'INVALID_STRONG' };
   if (!databases) return { error: 'LEXICON_UNAVAILABLE' };
   const db = databases[id[0]];
