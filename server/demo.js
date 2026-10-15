@@ -75,6 +75,10 @@ export function createDemoProviders() {
     },
     async study(route) {
       const result = structuredClone(studies[route.key].study);
+      result.context.strength = 'contextual_inference';
+      for (const [section, strength] of Object.entries({ observations: 'direct_text', interpretation: 'contextual_inference', theology: 'theological_synthesis', connections: 'theological_synthesis', application: 'pastoral_application' })) {
+        for (const entry of result[section]) entry.strength = strength;
+      }
       if (/\b(apply|application|today|practice)\b/i.test(route.question)) result.title = `${result.title}: putting it into practice`;
       return result;
     },
