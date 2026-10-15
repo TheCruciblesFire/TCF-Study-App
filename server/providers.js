@@ -28,8 +28,15 @@ export function validateStudy(data, sources) {
   const sections = [result.data.context, ...result.data.observations, ...result.data.interpretation, ...result.data.theology, ...result.data.connections, ...result.data.application];
   if (sections.some(s => s.evidence.some(id => !ids.has(id)))) throw new AppError(502, 'INVALID_CITATION', 'The study contained an unverified reference. Please try again.');
   const allText = [result.data.title, ...sections.map(s => s.text), ...result.data.furtherStudy, result.data.caveat];
-  if (allText.some(text => /https?:\/\/|www\./i.test(text) || findReferences(text).some(ref => !referenceCovered(ref, sources))))
-    throw new AppError(502, 'INVALID_CITATION', 'The study introduced a source outside the retrieved Scripture. Please try again.');
+  const hasGeneratedUrl = allText.some(text => /https?:\/\/|www\./i.test(text));
+  const unmatched = [...new Set(allText.flatMap(text => findReferences(text)).filter(ref => !referenceCovered(ref, sources)))];
+  if (hasGeneratedUrl || unmatched.length) {
+    const error = new AppError(502, 'INVALID_CITATION', 'The study introduced a source outside the retrieved Scripture. Please try again.');
+    // Log only public Scripture identifiers, never questions, prose, Bible text or provider responses.
+    error.citationDiagnostic = { reason: hasGeneratedUrl ? 'generated_url' : 'unretrieved_reference',
+      unmatched: unmatched.slice(0, 5), available: sources.map(source => source.reference).slice(0, 3) };
+    throw error;
+  }
   return result.data;
 }
 async function getJSON(url, options, fetcher, service) {
