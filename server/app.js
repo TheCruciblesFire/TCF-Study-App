@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { createStore } from './store.js';
 import { createDemoProviders } from './demo.js';
-import { createLiveProviders, validateStudy } from './providers.js';
+import { createLiveProviders, validateStudy, explainSources } from './providers.js';
 import { parseReference } from './references.js';
 import { AppError } from './errors.js';
 
@@ -98,7 +98,7 @@ export function createApp(config, overrides = {}) {
           catch (error) { if (!['INVALID_REFERENCE', 'BIBLE_CONTENT', 'PROVIDER_ERROR'].includes(error.code)) throw error; }
         }
         const study = validateStudy(await providers.study(route, sources, meter), sources);
-        answer = { mode: config.APP_MODE, kind: route.kind, sources, study, ...(route.key ? { demoKey: route.key } : {}) };
+        answer = { mode: config.APP_MODE, kind: route.kind, sources: explainSources(study, sources), study, ...(route.key ? { demoKey: route.key } : {}) };
       }
       // Analytics tokens belong only in the immediate response, never stored in history.
       const retained = structuredClone(answer);
