@@ -48,3 +48,24 @@ test('missing lemma is excluded but valid rows remain importable', () => {
   assert.equal(audit.exclusions[0].reason, 'missing lemma');
   assert.match(normalized, /G26\tἀγάπη\tlove/);
 });
+
+test('real STEP cross-number aliases and lowercase suffixes are audited, not guessed', () => {
+  const greek = [
+    'eStrong\tdStrong\tuStrong\tGreek\tTransliteration\tMorph\tGloss\tMeaning',
+    'G2495\tG2491K =\tG2491K\tἸωνᾶς\tIōnas\tN:N-M-P\tJohn\tentry',
+    'G0026\tG0026 =\tG0026\tἀγάπη\tagapē\tG:N-F\tlove\tentry',
+  ].join('\n');
+  const g = normalizeStepBriefLexicon(greek, 'G');
+  assert.equal(g.audit.imported, 1);
+  assert.equal(g.audit.excluded, 1);
+  assert.match(g.audit.exclusions[0].reason, /extended alias/);
+  const hebrew = [
+    'eStrong#\tdStrong\tuStrong\tHebrew\tTransliteration\tMorph\tGloss\tMeaning',
+    'H5838\tH5838w = a Name of\tH5818H\tעֲזַרְיָה\ta.zar.yah\tN:N-M-P\tAzariah\tentry',
+    'H7178\tH7156H =\tH7156H\tקִרְיָתַיִם\tqir.ya.ta.yim\tN:N--L\tKartan\tentry',
+    'H0010\tH0010 =\tH0010\tאֲבַדּוֹן\ta.vad.don\tH:N-F\tdestruction\tentry',
+  ].join('\n');
+  const h = normalizeStepBriefLexicon(hebrew, 'H');
+  assert.equal(h.audit.imported, 1);
+  assert.equal(h.audit.excluded, 2);
+});
