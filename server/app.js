@@ -1,3 +1,4 @@
+import { chooseContextReference } from './context.js';
 import express from 'express';
 import { randomUUID, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -82,9 +83,17 @@ export function createApp(config, overrides = {}) {
           if (!supporting) throw new AppError(502, 'INVALID_REFERENCE', 'A supporting Scripture reference could not be verified. Please try again.');
           if (!references.includes(supporting.reference)) references.push(supporting.reference);
         }
+        const contextReference = config.APP_MODE === 'live' ? chooseContextReference(main.reference, references) : null;
         const sources = [];
-        // Sequential requests limit pressure on licensed Bible API quotas.
+        // Sequential requests limit pressure on Bible API quotas. The optional
+        // preceding-context excerpt consumes the unused third source slot.
         for (const reference of references) sources.push({ ...await providers.bible(reference), id: `S${sources.length + 1}`, role: sources.length ? 'Supporting Scripture' : 'Main passage' });
+        if (contextReference) {
+          // Context is helpful but never permitted to block an otherwise valid
+          // study when the provider cannot retrieve the excerpt.
+          try { sources.push({ ...await providers.bible(contextReference), id: `S${sources.length + 1}`, role: 'Immediate context' }); }
+          catch (error) { if (!['INVALID_REFERENCE', 'BIBLE_CONTENT', 'PROVIDER_ERROR'].includes(error.code)) throw error; }
+        }
         const study = validateStudy(await providers.study(route, sources, meter), sources);
         answer = { mode: config.APP_MODE, kind: route.kind, sources, study, ...(route.key ? { demoKey: route.key } : {}) };
       }
