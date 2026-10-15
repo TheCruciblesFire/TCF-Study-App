@@ -83,7 +83,7 @@ export function createApp(config, overrides = {}) {
           if (!supporting) throw new AppError(502, 'INVALID_REFERENCE', 'A supporting Scripture reference could not be verified. Please try again.');
           if (!references.includes(supporting.reference)) references.push(supporting.reference);
         }
-        const contextReference = config.APP_MODE === 'live' ? chooseContextReference(main.reference, references.length) : null;
+        const contextReference = config.APP_MODE === 'live' ? chooseContextReference(main.reference, references) : null;
         const sources = [];
         // Sequential requests limit pressure on Bible API quotas. The optional
         // preceding-context excerpt consumes the unused third source slot.
