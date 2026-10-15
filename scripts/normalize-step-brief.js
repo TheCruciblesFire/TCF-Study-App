@@ -18,7 +18,12 @@ export function normalizeStepBriefLexicon(raw, language) {
     if (parts.length < 8) throw Error('Malformed source record');
     const [strong, disambiguated, , lemma, , , gloss] = parts;
     const id = parseStrongId(strong.replace(/^([GH])0+([1-9])/, '$1$2'));
-    if (!id || !lemma.trim() || !gloss.trim() || !/^[GH]\d{4}[A-Z]?/.test(disambiguated)) throw Error('Invalid source record');
+    if (!id || !/^[GH]\d{4}[A-Z]?/.test(disambiguated)) throw Error('Invalid source record');
+    parsed++;
+    if (!lemma.trim() || !gloss.trim()) {
+      incomplete.push({ id, disambiguated: disambiguated.trim(), reason: !lemma.trim() ? 'missing lemma' : 'missing gloss' });
+      continue;
+    }
     const list = grouped.get(id) ?? [];
     list.push({ id, lemma: lemma.trim(), gloss: gloss.trim().replace(/\s+/g, ' '), disambiguated: disambiguated.trim() });
     grouped.set(id, list);
