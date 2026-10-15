@@ -47,6 +47,12 @@
           </div>
           <p class="welcome-caption">No account needed. Just an open Bible and a willing heart.</p>
         </section>
+        <section id="lexical-tool" class="lexical-tool" aria-labelledby="lexical-title" hidden>
+          <h2 id="lexical-title">Original-language word lookup</h2>
+          <p>Look up a traditional Strong’s number. Glosses are not verse-specific interpretations.</p>
+          <form id="strong-form"><label for="strong-id">Strong’s number</label> <input id="strong-id" name="id" pattern="[GgHh][0-9]{1,5}" maxlength="6" placeholder="G26 or H10" required> <button type="submit">Look up</button></form>
+          <div id="strong-output" role="status" aria-live="polite"></div>
+        </section>
         <section class="conversation" id="conversation" aria-label="Your conversation" hidden></section>
       </div>
       <div class="composer-wrap">
