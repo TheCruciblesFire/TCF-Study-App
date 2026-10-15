@@ -40,6 +40,19 @@ export const studySchema = z.object({
   furtherStudy: z.array(z.string().min(1).max(400)).min(1).max(3),
   caveat: z.string().max(500),
 });
+// Rationale is derived from the verified study connections, never from an
+// unretrieved model-created citation or a speculative source-selection story.
+export function explainSources(study, sources) {
+  const main = sources[0];
+  return sources.map(source => {
+    if (source.id === main.id) return { ...source, selectionReason: 'Controlling passage requested for this study.' };
+    if (source.role === 'Immediate context') return { ...source, selectionReason: 'Nearby preceding verses used to check the immediate literary context.' };
+    const match = study.connections.find(item => item.evidence.includes(main.id) && item.evidence.includes(source.id));
+    return { ...source, selectionReason: match
+      ? 'This passage is discussed alongside the controlling text in the study’s cross-reference section.'
+      : 'Additional Scripture retrieved for comparison; the study does not establish a specific connection.' };
+  });
+}
 export function validateStudy(data, sources) {
   const result = studySchema.safeParse(data);
   if (!result.success) throw new AppError(502, 'INVALID_STUDY', 'The study could not be verified. Please try a smaller passage.');

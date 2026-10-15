@@ -79,6 +79,7 @@ function sourceCard(source, turnId) {
   const content = el('div', 'source-content');
   content.append(el('p', 'scripture-text', source.text), el('p', 'copyright', source.copyright));
   if (source.info) content.append(el('p', 'copyright', source.info));
+  if (source.selectionReason) content.append(el('p', 'source-disclosure', `Why this source: ${source.selectionReason}`));
   // Only server-constructed, allowlisted links. Model output never becomes a URL or HTML.
   try {
     const url = new URL(source.url);

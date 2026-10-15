@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { createApp } from '../server/app.js';
 import { loadConfig } from '../server/config.js';
-import { createLiveProviders, validateStudy, validateRouteSources } from '../server/providers.js';
+import { createLiveProviders, validateStudy, validateRouteSources, explainSources } from '../server/providers.js';
 import { createStore } from '../server/store.js';
 import { createDemoProviders } from '../server/demo.js';
 
@@ -283,4 +283,21 @@ test('Phase 2 evidence strength is required and constrained by study section', a
   const unknownEvidence = structuredClone(original);
   unknownEvidence.connections[0].evidence = ['S404'];
   assert.throws(() => validateStudy(unknownEvidence, sources), /unverified reference/);
+});
+
+
+test('selection rationales only claim connections substantiated by study evidence IDs', async () => {
+  const demo = createDemoProviders();
+  const route = await demo.route('John 15:1–8', []);
+  const study = await demo.study(route);
+  const sources = [{ id: 'S1', role: 'Main passage' }, { id: 'S2', role: 'Supporting Scripture' }, { id: 'S3', role: 'Supporting Scripture' }, { id: 'S4', role: 'Immediate context' }];
+  const reasoned = explainSources(study, sources);
+  assert.match(reasoned[0].selectionReason, /Controlling passage/);
+  assert.match(reasoned[1].selectionReason, /cross-reference section/);
+  assert.match(reasoned[2].selectionReason, /cross-reference section/);
+  assert.match(reasoned[3].selectionReason, /preceding verses/);
+  const withoutConnection = structuredClone(study);
+  withoutConnection.connections = [];
+  assert.match(explainSources(withoutConnection, sources)[1].selectionReason, /does not establish/);
+  assert.equal(sources[1].selectionReason, undefined);
 });
