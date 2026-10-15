@@ -71,3 +71,35 @@ test('source identifier variants do not reject ordinary rows or silently map ali
   assert.equal(h.audit.imported, 1);
   assert.equal(h.audit.excluded, 1);
 });
+
+test('an incomplete extended sense withholds the whole base Strong ID regardless of row order', () => {
+  const header = 'eStrong\tdStrong\tuStrong\tGreek\tTransliteration\tMorph\tGloss\tMeaning';
+  const valid = 'G2199\tG2199G =\tG2199G\tΖεβεδαῖος\tZebedaios\tN:N-M\tZebedee\tentry';
+  const incomplete = 'G2199\tG2199H =\tG2199H\t\t\tN:N-F-P\t[wife of Zebedee]\tentry';
+  const safe = 'G0026\tG0026 =\tG0026\tἀγάπη\tagapē\tG:N-F\tlove\tentry';
+  for (const order of [[valid, incomplete], [incomplete, valid]]) {
+    const { normalized, audit } = normalizeStepBriefLexicon([header, ...order, safe].join('\n'), 'G');
+    assert.doesNotMatch(normalized, /G2199\t/);
+    assert.match(normalized, /G26\tἀγάπη\tlove/);
+    assert.equal(audit.imported, 1);
+    assert.equal(audit.sourceRecords, 3);
+    assert.equal(audit.excludedSourceRecords, 2);
+    assert.equal(audit.sourceRecords, audit.imported + audit.excludedSourceRecords);
+    assert.ok(audit.exclusions.some(e => e.id === 'G2199' && /missing lemma/.test(e.reason)));
+    assert.ok(audit.exclusions.some(e => e.id === 'G2199' && /withheld/.test(e.reason)));
+  }
+});
+
+test('aliased row also blocks the related valid base ID', () => {
+  const raw = [
+    'eStrong#\tdStrong\tuStrong\tHebrew\tTransliteration\tMorph\tGloss\tMeaning',
+    'H5838\tH5838w = a Name of\tH5818H\tעֲזַרְיָה\ta.zar.yah\tN:N-M-P\tAzariah\tentry',
+    'H5838\tH5838 =\tH5838\tעֲזַרְיָה\ta.zar.yah\tH:N-M\tAzariah\tentry',
+    'H0010\tH0010 =\tH0010\tאֲבַדּוֹן\ta.vad.don\tH:N-F\tdestruction\tentry'
+  ].join('\n');
+  const { normalized, audit } = normalizeStepBriefLexicon(raw, 'H');
+  assert.doesNotMatch(normalized, /H5838\t/);
+  assert.equal(audit.imported, 1);
+  assert.equal(audit.excludedSourceRecords, 2);
+  assert.equal(audit.sourceRecords, audit.imported + audit.excludedSourceRecords);
+});

@@ -15,7 +15,10 @@ export function buildFullLexicon(raw, { language, blobSha, commit, sourceUrl }) 
     sourceUrl, commit, normalizedSha256: createHash('sha256').update(normalized).digest('hex'), license: 'CC BY 4.0'
   };
   const index = importLexicon(normalized, manifest);
-  if (Object.keys(index.entries).length !== audit.imported) throw Error('Audit count mismatch');
+  if (Object.keys(index.entries).length !== audit.imported ||
+      audit.sourceRecords !== audit.imported + audit.excludedSourceRecords || !audit.reconciled) {
+    throw Error('Audit count mismatch');
+  }
   for (const [id, expected] of Object.entries(language === 'G'
     ? { G26: ['ἀγάπη', 'love'], G3056: ['λόγος', 'word'] }
     : { H10: ['אֲבַדּוֹן', 'destruction'] })) {
@@ -30,5 +33,5 @@ if (process.argv[1]?.endsWith('/build-full-step.js')) {
   mkdirSync(dirname(outputPrefix), { recursive: true });
   writeFileSync(outputPrefix + '.json', JSON.stringify(result.index) + '\n', { flag: 'wx' });
   writeFileSync(outputPrefix + '.audit.json', JSON.stringify(result.audit, null, 2) + '\n', { flag: 'wx' });
-  console.log(`Imported ${result.audit.imported}, excluded ${result.audit.excluded} ambiguous IDs`);
+  console.log(`Imported ${result.audit.imported} entries; excluded ${result.audit.excludedSourceRecords} source rows across ${result.audit.excluded} audit items; reconciled ${result.audit.sourceRecords} total source rows`);
 }
