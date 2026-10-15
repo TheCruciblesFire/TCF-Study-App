@@ -9,6 +9,6 @@ export function chooseContextReference(mainReference, sourceCount) {
   if (!main || sourceCount >= 3 || main.start === null) return null;
   if (main.start < 3 || main.end - main.start + 1 > 16) return null;
   const start = Math.max(1, main.start - 2);
-  const context = parseReference(`${main.reference.replace(/\\s+\\d+(?::.*)?$/, '')} ${main.chapter}:${start}–${main.start - 1}`);
+  const context = parseReference(`${main.reference.replace(/ [0-9]+:.+$/, '')} ${main.chapter}:${start}–${main.start - 1}`);
   return context?.reference ?? null;
 }
