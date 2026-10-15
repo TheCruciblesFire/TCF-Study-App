@@ -48,7 +48,10 @@ export function referenceCovered(reference, sources) {
   if (!requested) return false;
   return sources.some(source => {
     const available = parseReference(source.reference);
-    return available && available.book === requested.book && available.chapter === requested.chapter &&
-      (!available.start || (requested.start && requested.start >= available.start && requested.end <= available.end));
+    if (!available || available.book !== requested.book || available.chapter !== requested.chapter) return false;
+    // A bare chapter label may identify the chapter containing a retrieved excerpt.
+    // This is only reference-label coverage, not proof of claims about unretrieved verses.
+    if (requested.start === null) return true;
+    return available.start === null || (requested.start >= available.start && requested.end <= available.end);
   });
 }
