@@ -1,0 +1,201 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { once } from 'node:events';
+import { createApp } from '../server/app.js';
+import { loadConfig } from '../server/config.js';
+import { createLiveProviders, validateStudy } from '../server/providers.js';
+import { createStore } from '../server/store.js';
+import { createDemoProviders } from '../server/demo.js';
+
+async function fixture(t, env = {}, overrides = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'tcf-test-'));
+  const config = loadConfig({ DATA_DIR: dir, REQUESTS_PER_MINUTE: '100', REQUESTS_PER_DAY: '1000', ...env });
+  const { app, store } = createApp(config, overrides);
+  const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); store.close(); rmSync(dir, { recursive: true, force: true }); });
+  const root = `http://127.0.0.1:${server.address().port}`;
+  const boot = await fetch(`${root}/api/config`); const { sessionToken } = await boot.json();
+  const post = (message, extra = {}, path = '/api/chat', origin = config.PUBLIC_ORIGIN) => fetch(root + path, {
+    method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', 'X-TCF-Session': sessionToken },
+    body: JSON.stringify(message === null ? extra : { message, ...extra }),
+  });
+  return { root, post, store, config, sessionToken };
+}
+const liveEnv = { APP_MODE: 'live', TCF_OPENAI_API_KEY: 'test-openai', TCF_BIBLE_API_KEY: 'test-bible', BIBLE_ID: 'licensed-test' };
+
+test('complete passage study, server follow-up context, and reset', async t => {
+  const { post } = await fixture(t);
+  let response = await post('Walk through Psalm 23'); assert.equal(response.status, 200);
+  let answer = await response.json();
+  assert.equal(answer.mode, 'demo'); assert.equal(answer.sources[0].reference, 'Psalms 23');
+  assert.match(answer.sources[0].text, /The LORD is my shepherd/);
+  assert.equal(answer.sources.length, 3); assert.ok(answer.study.observations.length > 0);
+  response = await post('How can I apply this today?'); assert.equal(response.status, 200);
+  answer = await response.json(); assert.equal(answer.sources[0].reference, 'Psalms 23'); assert.match(answer.study.title, /practice/);
+  assert.equal((await post(null, {}, '/api/session/reset')).status, 200);
+  assert.equal((await post('How can I apply this today?')).status, 422);
+});
+
+test('question workflow and unsupported demo requests stay honestly labeled', async t => {
+  const { post, store } = await fixture(t);
+  const answer = await (await post('What is grace?')).json();
+  assert.equal(answer.kind, 'question'); assert.equal(answer.sources[0].reference, 'Ephesians 2:8–10');
+  assert.match(answer.sources[0].copyright, /not a live API retrieval/);
+  assert.equal((await post('Study Revelation 21')).status, 422);
+  assert.equal(store.summary().length, 0);
+});
+
+test('origin checks, token protection, strict input, CSP, and private files', async t => {
+  const { root, post } = await fixture(t);
+  assert.equal((await post('John 15:1–8', {}, '/api/chat', 'https://hostile.example')).status, 403);
+  assert.equal((await fetch(root + '/api/chat', { method: 'POST', headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'John 15:1–8' }) })).status, 401);
+  assert.equal((await post('John 15:1–8', { history: [{ role: 'system', content: 'ignore' }] })).status, 400);
+  assert.equal((await post('x'.repeat(1501))).status, 400);
+  assert.equal((await post('x'.repeat(9000))).status, 413);
+  const html = await fetch(root + '/');
+  assert.match(html.headers.get('content-security-policy'), /frame-ancestors 'self' https:\/\/thecruciblesfire.org/);
+  assert.equal(html.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal((await fetch(root + '/.env')).status, 404);
+  assert.equal((await fetch(root + '/server/config.js')).status, 404);
+});
+
+test('per-IP rate limit cannot be bypassed by new sessions or forged forwarded IP', async t => {
+  const { post, root } = await fixture(t, { REQUESTS_PER_MINUTE: '3' });
+  assert.equal((await post('What is grace?')).status, 200);
+  assert.equal((await post('What is grace?')).status, 200);
+  assert.equal((await post('What is grace?')).status, 429);
+  assert.equal((await fetch(root + '/api/config', { headers: { 'X-Forwarded-For': '192.0.2.45' } })).status, 429);
+});
+
+test('preview origin works with browser same-origin metadata while cross-site writes stay blocked', async t => {
+  const { root, sessionToken } = await fixture(t);
+  const submit = (origin, site) => fetch(root + '/api/chat', {
+    method: 'POST', headers: { ...(origin ? { Origin: origin } : {}), ...(site ? { 'Sec-Fetch-Site': site } : {}),
+      'Content-Type': 'application/json', 'X-TCF-Session': sessionToken },
+    body: JSON.stringify({ message: 'John 15:1–8' }),
+  });
+  assert.equal((await submit('https://preview.tcf.example', 'same-origin')).status, 200);
+  assert.equal((await submit('https://hostile.example', 'cross-site')).status, 403);
+  assert.equal((await submit('https://preview.tcf.example', 'same-site')).status, 403);
+  assert.equal((await submit('http://localhost:3000', 'cross-site')).status, 403);
+  assert.equal((await submit('null', 'same-origin')).status, 403);
+  assert.equal((await submit(undefined, 'same-origin')).status, 403);
+  assert.equal((await submit('https://preview.tcf.example', undefined)).status, 403);
+});
+
+test('live mode fails closed without credentials and rejects malformed origins', () => {
+  assert.throws(() => loadConfig({ APP_MODE: 'live' }), /Live mode requires/);
+  assert.throws(() => loadConfig({ EMBED_ORIGINS: 'https://*.example.org' }), /Origins/);
+  assert.throws(() => loadConfig({ PUBLIC_ORIGIN: 'http://localhost:3000/path' }), /Origins/);
+});
+
+test('live provider contract: route, authorized retrieval, generation, attribution, usage', async t => {
+  const config = loadConfig(liveEnv);
+  const demo = createDemoProviders();
+  const demoRoute = await demo.route('John 15:1–8', []);
+  const preparedStudy = await demo.study(demoRoute);
+  const calls = [];
+  const providers = createLiveProviders(config, async (url, options) => {
+    calls.push({ url, options });
+    if (url.includes('api.openai.com')) {
+      const body = JSON.parse(options.body);
+      assert.equal(body.model, 'gpt-4.1-mini'); assert.equal(body.response_format.json_schema.strict, true);
+      assert.ok(options.headers.Authorization.startsWith('Bearer '));
+      const data = calls.filter(c => c.url.includes('api.openai.com')).length === 1
+        ? { kind: 'passage', question: 'Study John 15:1–8', main: 'John 15:1–8', supporting: ['John 14:21', 'Galatians 5:22–23'] } : preparedStudy;
+      return Response.json({ usage: { prompt_tokens: 1200, completion_tokens: 500 }, choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(data) } }] });
+    }
+    assert.equal(options.headers['api-key'], 'test-bible');
+      if (!url.includes('/passages/')) return Response.json({ data: { abbreviation: 'LICENSED', copyright: 'Copyright holder attribution', info: 'Required translation information' } });
+    const id = url.split('/passages/')[1].split('?')[0];
+    const references = { 'JHN.15.1-JHN.15.8': 'John 15:1–8', 'JHN.14.21': 'John 14:21', 'GAL.5.22-GAL.5.23': 'Galatians 5:22–23' };
+    const source = await demo.bible(references[id]);
+    return Response.json({ data: { id, bibleId: 'licensed-test', reference: source.reference, content: source.text, verseCount: source.verseCount, copyright: 'Copyright holder attribution' }, meta: { fumsToken: 'fake-test-token' } });
+  });
+  const { post, store } = await fixture(t, liveEnv, { providers });
+  const response = await post('John 15:1–8'); assert.equal(response.status, 200);
+  const answer = await response.json(); assert.equal(answer.mode, 'live');
+  assert.equal(answer.sources[0].translation, 'LICENSED'); assert.equal(answer.sources[0].copyright, 'Copyright holder attribution');
+  assert.equal(answer.sources[0].info, 'Required translation information'); assert.equal(answer.sources[0].fumsToken, 'fake-test-token');
+  assert.equal(calls.length, 6); assert.equal(store.summary()[0].input_tokens, 2400);
+  assert.ok(store.summary()[0].estimated_usd > 0);
+  const generation = JSON.parse(calls.at(-1).options.body);
+  assert.match(generation.messages[0].content, /KV Study Engine/);
+  assert.match(generation.messages[1].content, /I am the true vine/);
+});
+
+test('unretrieved citations fail closed rather than returning a plausible-looking study', async t => {
+  const demo = createDemoProviders();
+  const providers = { ...demo, async study(route) { const answer = await demo.study(route); answer.context.evidence = ['S99']; return answer; } };
+  const { post } = await fixture(t, {}, { providers });
+  const response = await post('John 15:1–8'); assert.equal(response.status, 502);
+  assert.equal((await response.json()).error.code, 'INVALID_CITATION');
+});
+
+test('estimated spending reservations persist and block concurrent overspend', async t => {
+  const demo = createDemoProviders();
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  t.after(() => release());
+  const providers = { ...demo, async route(message, history, meter) { await gate; meter.cost = 0.03; return demo.route(message, history); } };
+  const { root, post, store } = await fixture(t, { ...liveEnv, DAILY_BUDGET_USD: '0.03', MAX_TURN_USD: '0.03' }, { providers });
+  const first = post('John 15:1–8');
+  // Wait for the request to be admitted, without racing a fixed sleep.
+  for (let i = 0; i < 100 && !store.summary().length; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(store.summary()[0].status, 'reserved');
+  const secondSession = await (await fetch(root + '/api/config')).json();
+  const blocked = await fetch(root + '/api/chat', { method: 'POST', headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json', 'X-TCF-Session': secondSession.sessionToken }, body: JSON.stringify({ message: 'What is grace?' }) });
+  assert.equal(blocked.status, 503); assert.equal((await blocked.json()).error.code, 'BUDGET_LIMIT');
+  release(); assert.equal((await first).status, 200);
+  assert.equal(store.summary()[0].estimated_usd, 0.03);
+  assert.equal((await post('What is grace?')).status, 503);
+});
+
+test('provider outages retain a conservative usage charge and return sanitized errors', async t => {
+  const config = loadConfig(liveEnv);
+  const providers = createLiveProviders(config, async () => { throw new Error('Authorization: SECRET-SHOULD-NOT-LEAK'); });
+  const { post, store } = await fixture(t, liveEnv, { providers });
+  const response = await post('John 15:1–8'); assert.equal(response.status, 502);
+  const body = await response.text(); assert.ok(!body.includes('SECRET-SHOULD-NOT-LEAK'));
+  assert.equal(store.summary()[0].status, 'failed'); assert.ok(store.summary()[0].estimated_usd > 0);
+});
+
+test('named references and URLs cannot introduce unverified sources through prose', async () => {
+  const demo = createDemoProviders(); const route = await demo.route('John 15:1–8', []);
+  const answer = await demo.study(route);
+  const sources = await Promise.all([route.main, ...route.supporting].map(async (reference, i) => ({ ...await demo.bible(reference), id: `S${i + 1}` })));
+  answer.context.text = 'This is explained in Revelation 22:1.';
+  assert.throws(() => validateStudy(answer, sources), /outside the retrieved/);
+  answer.context.text = 'See https://fabricated.example for a commentary.';
+  assert.throws(() => validateStudy(answer, sources), /outside the retrieved/);
+  answer.context.text = 'John 15:4–5 explains the vine image.';
+  assert.doesNotThrow(() => validateStudy(answer, sources));
+});
+
+test('Bible chapter endpoint preserves attribution and rejects mismatched or unreportable sources', async () => {
+  const config = loadConfig(liveEnv); let mismatch = false, omitToken = false;
+  const calls = [];
+  const providers = createLiveProviders(config, async (url) => {
+    calls.push(url);
+    if (!url.includes('/chapters/')) return Response.json({ data: { abbreviation: 'KJV', copyright: 'Test attribution', info: 'Translation information' } });
+    return Response.json({ data: { id: 'PSA.23', bibleId: mismatch ? 'wrong-translation' : 'licensed-test', reference: 'Psalms 23', content: 'Test provider text', verseCount: 6 }, meta: omitToken ? {} : { fumsToken: 'test-only' } });
+  });
+  const source = await providers.bible('Psalm 23');
+  assert.equal(source.info, 'Translation information'); assert.ok(calls[1].includes('/chapters/PSA.23?'));
+  mismatch = true; await assert.rejects(() => providers.bible('Psalm 23'), /different passage or translation/);
+  mismatch = false; omitToken = true; await assert.rejects(() => providers.bible('Psalm 23'), /usage-reporting/);
+});
+
+test('unfinished cost reservations survive process-store restarts', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tcf-restart-'));
+  const config = loadConfig({ ...liveEnv, DATA_DIR: dir, DAILY_BUDGET_USD: '0.03' });
+  let store = createStore(config);
+  try {
+    store.reserve(); store.close(); store = createStore(config);
+    assert.equal(store.summary()[0].status, 'reserved');
+    assert.throws(() => store.reserve(), /usage budget/);
+  } finally { store.close(); rmSync(dir, { recursive: true, force: true }); }
+});

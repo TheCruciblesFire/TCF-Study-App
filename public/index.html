@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="A Scripture-centered study companion from The Crucible’s Fire. Explore a passage, ask a question, and follow the text.">
+  <title>Bible Study Assistant · The Crucible’s Fire</title>
+  <link rel="icon" type="image/png" href="/brand/flame.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#question">Skip to your question</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Study navigation">
+      <a class="brand" href="/" aria-label="The Crucible’s Fire home">
+        <img src="/brand/flame.png" alt="" width="80" height="84">
+        <span class="brand-name"><span class="brand-the">THE</span> CRUCIBLE’S FIRE</span>
+        <span class="brand-rule"></span>
+        <span class="brand-tagline">Learn. Teach. Repeat.</span>
+      </a>
+      <button class="new-study" type="button" data-new-study><span aria-hidden="true">＋</span> New study <span class="new-study-arrow" aria-hidden="true">↗</span></button>
+      <div class="nav-label">YOUR STUDY SPACE</div>
+      <div class="nav-current">Bible Study Assistant <span class="nav-dot"></span></div>
+      <div class="sidebar-note"><span class="note-rule" aria-hidden="true"></span><h2>Let the text lead.</h2><p>Observe carefully.<br>Understand in context.<br>Live what you learn.</p></div>
+      <div class="sidebar-bottom"><span class="sidebar-line"></span><p>A ministry of<br><strong>The Crucible’s Fire</strong></p><button class="text-link" type="button" id="about-button">Our approach <span aria-hidden="true">↗</span></button></div>
+    </aside>
+    <main id="main" class="main-panel">
+      <header class="topbar">
+        <div class="mobile-brand"><img src="/brand/flame.png" alt="" width="40" height="43"><span>THE CRUCIBLE’S FIRE<small>Learn. Teach. Repeat.</small></span></div>
+        <div class="breadcrumb">Study tools <span aria-hidden="true">/</span> <strong>Bible Study Assistant</strong></div>
+        <div class="topbar-right"><span class="scripture-first"><span></span> Scripture first</span><button class="mobile-new" data-new-study type="button" aria-label="Start a new study">＋</button></div>
+      </header>
+      <div id="mode-notice" class="mode-notice" role="status">Connecting to your study space…</div>
+      <div class="study-body" id="study-body">
+        <section class="welcome" id="welcome" aria-labelledby="welcome-title">
+          <div class="welcome-rule" aria-hidden="true"></div>
+          <p class="eyebrow">A QUIET PLACE TO GO DEEPER</p>
+          <h1 id="welcome-title">Rooted in the Word.<br><em>Ready to grow.</em></h1>
+          <p class="welcome-description">Bring a passage. Ask an honest question.<br>Explore Scripture with context, clarity, and care.</p>
+          <div class="starter-heading"><span></span> BEGIN WITH A QUESTION <span></span></div>
+          <div class="starter-grid">
+            <button class="starter" type="button" data-question="Study John 15:1–8"><span class="starter-icon" aria-hidden="true">01</span><span class="starter-type">EXPLORE A PASSAGE</span><strong>John 15:1–8</strong><span class="starter-description">What does it mean to abide?</span><span class="starter-arrow" aria-hidden="true"></span></button>
+            <button class="starter" type="button" data-question="Walk through Psalm 23"><span class="starter-icon" aria-hidden="true">02</span><span class="starter-type">LOOK A LITTLE CLOSER</span><strong>Psalm 23</strong><span class="starter-description">The Shepherd’s presence.</span><span class="starter-arrow" aria-hidden="true"></span></button>
+            <button class="starter" type="button" data-question="What is grace?"><span class="starter-icon" aria-hidden="true">03</span><span class="starter-type">ASK A BIBLE QUESTION</span><strong>What is grace?</strong><span class="starter-description">Start with the foundation.</span><span class="starter-arrow" aria-hidden="true"></span></button>
+          </div>
+          <p class="welcome-caption">No account needed. Just an open Bible and a willing heart.</p>
+        </section>
+        <section class="conversation" id="conversation" aria-label="Your conversation" hidden></section>
+      </div>
+      <div class="composer-wrap">
+        <div id="request-status" class="request-status" aria-live="polite" aria-atomic="true"></div>
+        <form id="chat-form" class="composer">
+          <label for="question" class="sr-only">Your Scripture passage or biblical question</label>
+          <textarea id="question" name="message" placeholder="Enter a passage or ask a biblical question…" maxlength="1500" rows="1" required disabled></textarea>
+          <div class="composer-bottom"><span class="composer-hint">Passage study &amp; biblical questions</span><button class="send-button" id="send-button" type="submit" aria-label="Send your question" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
+        </form>
+        <p class="composer-caption">A companion to your study, never a substitute for Scripture.<br class="mobile-break"> <button id="privacy-button" class="inline-link" type="button">Privacy &amp; limitations</button></p>
+      </div>
+      <footer class="footer"><span>Learn. Teach. Repeat.</span><span>THE CRUCIBLE’S FIRE</span></footer>
+    </main>
+  </div>
+  <dialog id="info-dialog" aria-labelledby="dialog-title"><button class="dialog-close" type="button" aria-label="Close dialog">×</button><p class="eyebrow">THE CRUCIBLE’S FIRE</p><h2 id="dialog-title"></h2><div id="dialog-content"></div></dialog>
+</body>
+</html>

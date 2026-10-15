@@ -1,0 +1,178 @@
+const $ = selector => document.querySelector(selector);
+const form = $('#chat-form'), input = $('#question'), sendButton = $('#send-button');
+const conversation = $('#conversation'), welcome = $('#welcome'), status = $('#request-status');
+let config, busy = false;
+let nextTurnId = 0;
+const el = (tag, className, text) => {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+};
+function setBusy(value) {
+  busy = value; sendButton.disabled = value || !config; input.disabled = value || !config;
+  document.querySelectorAll('[data-question], [data-new-study], .followup-chips button').forEach(button => { button.disabled = value || !config; });
+  form.setAttribute('aria-busy', String(value));
+}
+function announce(message, error = false) { status.textContent = message; status.classList.toggle('error', error); }
+function scrollToElement(element) { element.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' }); }
+async function request(path, body) {
+  let response;
+  try {
+    response = await fetch(path, { method: body ? 'POST' : 'GET', headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(config ? { 'X-TCF-Session': config.sessionToken } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(160_000) });
+  } catch { throw new Error('We couldn’t connect. Check your connection and try again.'); }
+  let data;
+  try { data = await response.json(); } catch { throw new Error('The server returned an unreadable response. Please try again.'); }
+  if (!response.ok) throw new Error(data.error?.message || 'The request could not be completed.');
+  return data;
+}
+async function connect() {
+  try {
+    const nextConfig = await request('/api/config');
+    if (nextConfig.mode === 'live') await loadBibleReporting();
+    config = nextConfig;
+    const notice = $('#mode-notice');
+    notice.textContent = config.preview ? 'OFFLINE DEMO · Three curated studies. Everything stays in this page. No server or live AI.' : config.mode === 'demo' ? 'DEMO EXPERIENCE · Three curated studies. No live AI or Bible API calls. Try an example below.' : 'LIVE STUDY · Responses use retrieved Scripture and AI. Read the sources and verify the explanation.';
+    notice.classList.toggle('live', config.mode === 'live');
+    setBusy(false);
+  } catch (error) {
+    $('#mode-notice').textContent = 'Your study space could not connect.';
+    announce(error.message, true);
+    const retry = el('button', 'reconnect', 'Reconnect'); retry.type = 'button';
+    retry.addEventListener('click', () => { announce('Connecting…'); connect(); }); status.append(retry);
+  }
+}
+let reportingReady = false;
+async function loadBibleReporting() {
+  if (reportingReady) return;
+  // API.Bible's first-party FUMS v3 client. Never execute provider-supplied scripts.
+  window._BAPI = window._BAPI || {};
+  window._BAPI.t = window._BAPI.t || [];
+  await new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://fums.api.bible/f3.js'; script.async = true;
+    script.onload = () => { reportingReady = true; resolve(); };
+    script.onerror = () => { script.remove(); reject(new Error('Required Bible usage reporting could not load. Check content blocking and reconnect.')); };
+    document.head.append(script);
+  });
+}
+function sourceCard(source, turnId) {
+  const details = el('details', 'source-card'); details.id = `${turnId}-${source.id}`;
+  const summary = el('summary'); summary.append(el('strong', '', `${source.reference} · ${source.translation}`), el('span', 'source-tag', source.role.toUpperCase()));
+  const content = el('div', 'source-content');
+  content.append(el('p', 'scripture-text', source.text), el('p', 'copyright', source.copyright));
+  if (source.info) content.append(el('p', 'copyright', source.info));
+  // Only server-constructed, allowlisted links. Model output never becomes a URL or HTML.
+  try {
+    const url = new URL(source.url);
+    if (url.protocol === 'https:' && url.hostname === 'www.blueletterbible.org') {
+      const link = el('a', 'source-link', 'Continue on Blue Letter Bible (KJV) ↗');
+      link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
+    }
+  } catch { /* Source text remains available if its external link is invalid. */ }
+  details.append(summary, content); return details;
+}
+function paragraphWithEvidence(item, sources, turnId) {
+  const p = el('p', '', item.text);
+  for (const id of item.evidence) {
+    const source = sources.find(s => s.id === id);
+    if (!source) continue;
+    const button = el('button', 'evidence-link', source.reference); button.type = 'button';
+    button.setAttribute('aria-label', `Read source: ${source.reference}`);
+    button.addEventListener('click', () => {
+      const details = document.getElementById(`${turnId}-${id}`); details.open = true;
+      details.querySelector('summary').focus(); scrollToElement(details);
+    });
+    p.append(button);
+  }
+  return p;
+}
+function renderAnswer(answer, mount, turnId) {
+  const label = el('div', 'assistant-label');
+  label.append(document.createTextNode('TCF STUDY ASSISTANT'));
+  const card = el('div', 'answer-card'); mount.append(label, card);
+  if (!answer.study) { card.append(el('p', 'answer-message', answer.message)); return; }
+  if (answer.mode === 'live') for (const source of answer.sources) {
+    if (source.fumsToken && reportingReady) window._BAPI.t.push(['trackView', source.fumsToken]);
+  }
+  card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'SCRIPTURE-GROUNDED STUDY'}`), el('h2', '', answer.study.title));
+  const sections = [['Passage & context', [answer.study.context]], ['Observe the text', answer.study.observations], ['Understand in context', answer.study.interpretation], ['Theological conclusions', answer.study.theology], ['Christ & the wider story', answer.study.connections], ['Put it into practice', answer.study.application]];
+  for (const [heading, items] of sections) {
+    if (!items.length) continue;
+    const section = el('section', 'answer-section'); section.append(el('h3', '', heading));
+    for (const item of items) section.append(paragraphWithEvidence(item, answer.sources, turnId));
+    card.append(section);
+  }
+  const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
+  const list = el('ul'); for (const question of answer.study.furtherStudy) list.append(el('li', '', question)); further.append(list); card.append(further);
+  if (answer.study.caveat) card.append(el('p', 'study-caveat', answer.study.caveat));
+  const sources = el('div', 'source-list'); sources.append(el('h3', '', 'READ THE SCRIPTURE · VERIFIED SOURCE SET'));
+  for (const source of answer.sources) sources.append(sourceCard(source, turnId));
+  sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : 'Source base: Scripture retrieved from API.Bible. Explanation and application are AI-generated synthesis. Linked resources were not consulted. A valid citation does not guarantee that an interpretation is correct.'));
+  card.append(sources);
+  const followups = el('div', 'followup-chips');
+  for (const text of ['How can I apply this today?', 'Explain the main idea']) {
+    const button = el('button', '', text); button.type = 'button'; button.addEventListener('click', () => submitMessage(text)); followups.append(button);
+  }
+  card.append(followups);
+}
+async function submitMessage(message) {
+  if (busy || !config || !message.trim()) return;
+  if (message.trim().length > config.maxMessageLength) { announce('Please keep your question within 1,500 characters.', true); return; }
+  setBusy(true); announce('Reading your question and preparing a study…');
+  welcome.hidden = true; conversation.hidden = false;
+  const turn = el('article', 'turn'); const turnId = `turn-${++nextTurnId}`; turn.id = turnId;
+  turn.append(el('p', 'question-bubble', message));
+  const pending = el('div', 'loading'); pending.setAttribute('aria-hidden', 'true');
+  pending.append(el('span'), el('span'), el('span'), el('p', '', config.mode === 'demo' ? 'Opening a curated example…' : 'Following the text…'));
+  turn.append(pending); conversation.append(turn); input.value = ''; input.style.height = '';
+  scrollToElement(turn);
+  try {
+    const answer = await request('/api/chat', { message });
+    pending.remove(); renderAnswer(answer, turn, turnId);
+    announce(config.mode === 'demo' ? 'Curated example ready. Live mode is needed for open-ended answers.' : 'Study ready. Open the Scripture sources to read and verify.');
+  } catch (error) {
+    pending.remove(); turn.append(el('p', 'answer-message', error.message)); announce(error.message, true);
+    const retry = el('button', 'retry-button', 'Try this question again'); retry.type = 'button';
+    retry.addEventListener('click', () => { if (!busy) { turn.remove(); submitMessage(message); } }); turn.append(retry);
+  } finally { setBusy(false); input.focus({ preventScroll: true }); }
+}
+form.addEventListener('submit', event => { event.preventDefault(); submitMessage(input.value.trim()); });
+input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); submitMessage(input.value.trim()); } });
+input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 140)}px`; });
+document.querySelectorAll('[data-question]').forEach(button => button.addEventListener('click', () => submitMessage(button.dataset.question)));
+document.querySelectorAll('[data-new-study]').forEach(button => button.addEventListener('click', async () => {
+  if (busy || !config) return;
+  setBusy(true);
+  try {
+    await request('/api/session/reset', {});
+    conversation.replaceChildren(); conversation.hidden = true; welcome.hidden = false; input.value = ''; input.style.height = ''; announce('A fresh study. Where would you like to begin?');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    $('#study-body').scrollTo({ top: 0, behavior: 'instant' });
+  } catch (error) { announce(error.message, true); }
+  finally { setBusy(false); input.focus({ preventScroll: true }); }
+}));
+const dialog = $('#info-dialog');
+function openInfo(title, paragraphs) {
+  $('#dialog-title').textContent = title;
+  $('#dialog-content').replaceChildren(...paragraphs.map(text => el('p', '', text)));
+  dialog.showModal();
+}
+$('#about-button').addEventListener('click', () => openInfo('The text leads.', [
+  'Our study approach adapts the KV Study Engine 3.0.1: observe the passage, interpret in context, distinguish theological synthesis, and then consider faithful application.',
+  'The first version supports passage studies and basic biblical questions. Christological and canonical connections belong only where the source passages support them. Original-language and comprehensive commentary research are not included.',
+  'The configured licensed Bible translation controls the quotations. Demo mode uses public-domain KJV examples. This app adapts the methodology; it does not run the ChatGPT plugin.',
+]));
+$('#privacy-button').addEventListener('click', () => openInfo('Study with care.', config?.preview ? [
+  'This is a self-contained offline demo with three prepared studies. Questions and temporary conversation history stay in this page’s memory. No server, API calls, cookies, or local storage are used. Closing or reloading the file clears the conversation.',
+  'Scripture and study notes are curated examples. Follow-up questions reopen the selected example; they are not live AI answers. External Blue Letter Bible links open only when you choose them.',
+  'The hosted app requires a separate backend and authorized API credentials for live studies. Never put API keys in this demo or in SnapPages.',
+] : [
+  'No visitor account is required, and this app sets no cookies. A temporary session token stays in this page’s memory. Reloading starts a new conversation. Up to six study exchanges are held on the server for 24 hours after your last successful study, with expired conversations removed on the next request.',
+  'In live mode, your question and recent conversation context are sent to OpenAI; selected passage references are sent to API.Bible. API.Bible’s first-party FUMS script reports Scripture usage and may process browser and network information under its own terms. Do not share sensitive personal information. Provider retention and licensing terms also apply.',
+  'New study clears the current server conversation. Cost records contain token counts and estimated costs, not conversation text. A keyed hash of your IP address is used temporarily to enforce usage limits.',
+  'AI can make mistakes, including attaching a real reference to a weak interpretation. Read the Scripture sources, consider context, and seek trusted pastoral guidance when needed. This assistant is not an emergency or professional counseling service.',
+]));
+dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
+setBusy(false); connect();
