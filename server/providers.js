@@ -44,9 +44,12 @@ export function validateStudy(data, sources) {
   const result = studySchema.safeParse(data);
   if (!result.success) throw new AppError(502, 'INVALID_STUDY', 'The study could not be verified. Please try a smaller passage.');
   const ids = new Set(sources.map(s => s.id));
+  // These tags describe the UI section's reasoning role; they are not an
+  // independent model judgment. Enforce deterministic section labels rather
+  // than rejecting an otherwise valid, fully cited study for a model's tag.
   const expectedStrengths = { observations: 'direct_text', interpretation: 'contextual_inference', theology: 'theological_synthesis', connections: 'theological_synthesis', application: 'pastoral_application' };
   for (const [section, strength] of Object.entries(expectedStrengths)) {
-    if (result.data[section].some(entry => entry.strength !== strength)) throw new AppError(502, 'INVALID_STUDY', 'The study mixed evidence classifications. Please try again.');
+    for (const entry of result.data[section]) entry.strength = strength;
   }
   const sections = [result.data.context, ...result.data.observations, ...result.data.interpretation, ...result.data.theology, ...result.data.connections, ...result.data.application];
   if (sections.some(s => s.evidence.some(id => !ids.has(id)))) throw new AppError(502, 'INVALID_CITATION', 'The study contained an unverified reference. Please try again.');
