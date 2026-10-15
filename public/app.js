@@ -91,6 +91,12 @@ function sourceCard(source, turnId) {
 }
 function paragraphWithEvidence(item, sources, turnId) {
   const p = el('p', '', item.text);
+  const strengthLabels = { direct_text: 'Direct text', contextual_inference: 'Contextual interpretation', theological_synthesis: 'Theological synthesis', pastoral_application: 'Pastoral application' };
+  if (strengthLabels[item.strength]) {
+    const strength = el('span', 'evidence-strength', strengthLabels[item.strength]);
+    strength.setAttribute('title', 'Classification of the reasoning step, not a confidence rating or independent verification.');
+    p.append(strength, document.createTextNode(' '));
+  }
   for (const id of item.evidence) {
     const source = sources.find(s => s.id === id);
     if (!source) continue;

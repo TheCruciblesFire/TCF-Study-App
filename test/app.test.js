@@ -263,3 +263,24 @@ test('Phase 2: supporting references must be distinct and non-overlapping', () =
   assert.throws(() => validateRouteSources(route(['John 0:1'])), /supporting passage was invalid/);
   assert.deepEqual(validateRouteSources(route(['John 15:9–12'])).supporting, ['John 15:9–12']);
 });
+
+
+test('Phase 2 evidence strength is required and constrained by study section', async () => {
+  const demo = createDemoProviders();
+  const route = await demo.route('John 15:1–8', []);
+  const original = await demo.study(route);
+  const sources = [{ id: 'S1', reference: 'John 15:1–8' }, { id: 'S2', reference: 'John 14:21' }, { id: 'S3', reference: 'Galatians 5:22–23' }];
+  assert.doesNotThrow(() => validateStudy(original, sources));
+  const withoutLabel = structuredClone(original);
+  delete withoutLabel.observations[0].strength;
+  assert.throws(() => validateStudy(withoutLabel, sources), /could not be verified/);
+  const wrongSection = structuredClone(original);
+  wrongSection.application[0].strength = 'direct_text';
+  assert.throws(() => validateStudy(wrongSection, sources), /mixed evidence classifications/);
+  const unknownLabel = structuredClone(original);
+  unknownLabel.theology[0].strength = 'high_confidence';
+  assert.throws(() => validateStudy(unknownLabel, sources), /could not be verified/);
+  const unknownEvidence = structuredClone(original);
+  unknownEvidence.connections[0].evidence = ['S404'];
+  assert.throws(() => validateStudy(unknownEvidence, sources), /unverified reference/);
+});
