@@ -48,3 +48,29 @@ test('missing lemma is excluded but valid rows remain importable', () => {
   assert.equal(audit.exclusions[0].reason, 'missing lemma');
   assert.match(normalized, /G26\tἀγάπη\tlove/);
 });
+
+test('extended STEPBible identifiers are audited rather than crashing base Strong importer', () => {
+  const greek = [
+    'eStrong\tdStrong\tuStrong\tGreek\tTransliteration\tMorph\tGloss\tMeaning',
+    'G6000\tG6000 =\tG6000\tἀγγέλλω\tangellō\tG:V\tto report\tentry',
+    'G0026\tG0026 =\tG0026\tἀγάπη\tagapē\tG:N-F\tlove\tentry'
+  ].join('\n');
+  const result = normalizeStepBriefLexicon(greek, 'G');
+  assert.equal(result.audit.sourceRecords, 2);
+  assert.equal(result.audit.imported, 1);
+  assert.equal(result.audit.excluded, 1);
+  assert.equal(result.audit.exclusions[0].id, 'G6000');
+  assert.match(result.audit.exclusions[0].reason, /outside supported/);
+  assert.match(result.normalized, /G26\tἀγάπη\tlove/);
+});
+test('Hebrew extended prefix identifiers are reported without defining an invalid Strong record', () => {
+  const hebrew = [
+    'eStrong#\tdStrong\tuStrong\tHebrew\tTransliteration\tMorph\tGloss\tMeaning',
+    'H9001\tH9001 =\tH9001\t\/וַ\tv\tH:Conj\t&\tentry',
+    'H0010\tH0010 =\tH0010\tאֲבַדּוֹן\ta.vad.don\tH:N-F\tdestruction\tentry'
+  ].join('\n');
+  const result = normalizeStepBriefLexicon(hebrew, 'H');
+  assert.equal(result.audit.imported, 1);
+  assert.equal(result.audit.excluded, 1);
+  assert.equal(result.audit.exclusions[0].id, 'H9001');
+});

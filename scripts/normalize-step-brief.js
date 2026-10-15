@@ -18,8 +18,14 @@ export function normalizeStepBriefLexicon(raw, language) {
     if (parts.length < 8) throw Error('Malformed source record');
     const [strong, disambiguated, , lemma, , , gloss] = parts;
     const id = parseStrongId(strong.replace(/^([GH])0+([1-9])/, '$1$2'));
-    if (!id || !/^[GH]\d{4}[A-Z]?/.test(disambiguated)) throw Error('Invalid source record');
+    // STEPBible includes extended IDs outside the traditional Strong ranges.
+    // Our current lookup contract cannot represent them, so audit exclusions.
+    if (!/^[GH][0-9]{4}$/.test(strong) || !/^[GH][0-9]{4}[A-Z]?(?:\\s|$)/.test(disambiguated)) throw Error('Invalid source record');
     parsed++;
+    if (!id) {
+      incomplete.push({ id: strong, disambiguated: disambiguated.trim(), reason: 'extended ID outside supported Strong range' });
+      continue;
+    }
     if (!lemma.trim() || !gloss.trim()) {
       incomplete.push({ id, disambiguated: disambiguated.trim(), reason: !lemma.trim() ? 'missing lemma' : 'missing gloss' });
       continue;
