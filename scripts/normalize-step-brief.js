@@ -22,7 +22,8 @@ export function normalizeStepBriefLexicon(raw, language) {
     if (strong.length !== 5 || strong[0] !== language ||
         !/^[0-9]{4}$/.test(strong.slice(1)) ||
         !disambiguated.startsWith(strong) ||
-        ![' ', '='].includes(disambiguated[strong.length] ?? '')) {
+        !([' ', '='].includes(disambiguated[strong.length] ?? '') ||
+          (/[A-Z]/.test(disambiguated[strong.length] ?? '') && disambiguated[strong.length + 1] === ' '))) {
       throw Error('Malformed STEP source identifier');
     }
     parsed++;
