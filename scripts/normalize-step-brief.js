@@ -21,10 +21,18 @@ export function normalizeStepBriefLexicon(raw, language) {
     // Validate the column shape before applying our narrower Strong ID limit.
     if (strong.length !== 5 || strong[0] !== language ||
         !/^[0-9]{4}$/.test(strong.slice(1)) ||
-        !disambiguated.startsWith(strong) ||
-        !([' ', '='].includes(disambiguated[strong.length] ?? '') ||
-          (/[A-Z]/.test(disambiguated[strong.length] ?? '') && disambiguated[strong.length + 1] === ' '))) {
+        !/^[GH][0-9]{4}[A-Za-z]?(?:\\s|$)/.test(disambiguated)) {
       throw Error('Malformed STEP source identifier');
+    }
+    // Authentic STEP contains cross-number aliases (G2495 -> G2491K,
+    // H7178 -> H7156H) and lowercase Hebrew suffixes (H5838w-z).
+    // Exclude these from a base-Strong index, documenting the original row.
+    if (!disambiguated.startsWith(strong) ||
+        (/[A-Za-z]/.test(disambiguated[strong.length] ?? '') &&
+         disambiguated[strong.length] !== disambiguated[strong.length].toUpperCase())) {
+      incomplete.push({ id: strong, disambiguated: disambiguated.trim(), reason: 'extended alias or lowercase identifier; requires reviewed mapping' });
+      parsed++;
+      continue;
     }
     parsed++;
     const id = parseStrongId(language + String(Number(strong.slice(1))));
