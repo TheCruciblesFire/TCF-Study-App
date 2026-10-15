@@ -5,6 +5,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && mkdir /app/.data && chown node:node /app/.data
 COPY --chown=node:node server ./server
 COPY --chown=node:node public ./public
+# Lexical JSON is intentionally not bundled. Mount reviewed G/H JSON and audit files
+# at a configured LEXICON_DIR to enable the optional read-only lookup.
 COPY --chown=node:node scripts/usage.js scripts/smoke.js ./scripts/
 USER node
 EXPOSE 3000
