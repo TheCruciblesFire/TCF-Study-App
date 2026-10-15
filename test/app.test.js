@@ -276,7 +276,7 @@ test('Phase 2 evidence strength is required and constrained by study section', a
   assert.throws(() => validateStudy(withoutLabel, sources), /could not be verified/);
   const wrongSection = structuredClone(original);
   wrongSection.application[0].strength = 'direct_text';
-  assert.throws(() => validateStudy(wrongSection, sources), /mixed evidence classifications/);
+  assert.equal(validateStudy(wrongSection, sources).application[0].strength, 'pastoral_application');
   const unknownLabel = structuredClone(original);
   unknownLabel.theology[0].strength = 'high_confidence';
   assert.throws(() => validateStudy(unknownLabel, sources), /could not be verified/);
