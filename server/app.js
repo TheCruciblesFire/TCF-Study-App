@@ -106,7 +106,7 @@ export function createApp(config, overrides = {}) {
     const status = error instanceof AppError ? error.status : error.status === 413 ? 413 : error.type === 'entity.parse.failed' ? 400 : 500;
     if (status === 429) res.set('Retry-After', '60');
     // Never log messages, prompts, provider bodies, authorization, or session tokens.
-    if (status >= 500) console.error(JSON.stringify({ requestId, status, code: error.code || 'INTERNAL_ERROR', ...(error.upstream ? { upstream: error.upstream } : {}) }));
+    if (status >= 500) console.error(JSON.stringify({ requestId, status, code: error.code || 'INTERNAL_ERROR', ...(error.upstream ? { upstream: error.upstream } : {}), ...(error.citationDiagnostic ? { citationDiagnostic: error.citationDiagnostic } : {}) }));
     res.status(status).json({ error: { code: error.code || (status === 413 ? 'MESSAGE_TOO_LARGE' : 'REQUEST_ERROR'),
       message: error instanceof AppError ? error.message : status === 413 ? 'Your message is too large.' : status === 400 ? 'Send a valid JSON message.' : 'The study assistant encountered a problem. Please try again.', requestId } });
   });
