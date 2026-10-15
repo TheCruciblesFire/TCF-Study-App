@@ -12,6 +12,7 @@ export function normalizeStepBriefLexicon(raw, language) {
   const grouped = new Map();
   let parsed = 0;
   const incomplete = [];
+  const blockedIds = new Set();
   for (const line of lines) {
     if (line[0] !== language || !/^[GH][0-9]{4}\t/.test(line)) continue;
     const parts = line.split('\t');
@@ -30,6 +31,7 @@ export function normalizeStepBriefLexicon(raw, language) {
     const alias = !disambiguated.startsWith(strong) ||
       /^[a-z]$/.test(disambiguated[strong.length] ?? '');
     if (alias || !id || !lemma.trim() || !gloss.trim()) {
+      if (id) blockedIds.add(id);
       incomplete.push({ id: id ?? strong, disambiguated: disambiguated.trim(),
         reason: alias ? 'extended alias or lowercase identifier; requires reviewed mapping' :
           !id ? 'extended ID outside supported Strong range' :
@@ -45,6 +47,10 @@ export function normalizeStepBriefLexicon(raw, language) {
   for (const [id, entries] of grouped) {
     // Include only IDs with ONE documented source row. Multiple extended
     // Strong distinctions require the future disambiguated-identifier schema.
+    if (blockedIds.has(id)) {
+      excluded.push({ id, reason: 'base Strong ID withheld due to related incomplete or aliased source record', count: entries.length });
+      continue;
+    }
     if (entries.length > 1) { excluded.push({ id, reason: 'multiple extended Strong entries', count: entries.length }); continue; }
     const entry = entries[0];
     if (entry.lemma.includes('\t') || entry.gloss.includes('\t') || entry.gloss.includes('\n')) throw Error('Unsafe TSV content');
@@ -52,5 +58,7 @@ export function normalizeStepBriefLexicon(raw, language) {
   }
   rows.sort((a,b) => a.id.localeCompare(b.id, 'en', {numeric:true}));
   const normalized = 'id\tlemma\tgloss\n' + rows.map(({id,lemma,gloss}) => [id,lemma,gloss].join('\t')).join('\n') + '\n';
-  return { normalized, audit: { language, sourceRecords: parsed, uniqueIds: grouped.size, imported: rows.length, excluded: excluded.length, exclusions: excluded } };
+  const excludedSourceRecords = excluded.reduce((sum, entry) => sum + (entry.count ?? 1), 0);
+  if (parsed !== rows.length + excludedSourceRecords) throw Error('STEP source row accounting mismatch');
+  return { normalized, audit: { language, sourceRecords: parsed, uniqueIds: new Set([...grouped.keys(), ...incomplete.map(item => item.id)]).size, imported: rows.length, excluded: excluded.length, excludedSourceRecords, reconciled: true, exclusions: excluded } };
 }
