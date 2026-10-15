@@ -11,19 +11,25 @@ export function normalizeStepBriefLexicon(raw, language) {
   if (!lines.some(line => header.test(line))) throw Error('STEPBible header missing or changed');
   const grouped = new Map();
   let parsed = 0;
+  const incomplete = [];
   for (const line of lines) {
-    if (!new RegExp(`^${language}[0-9]{4}\\t`).test(line)) continue;
+    if (line[0] !== language || !/^[GH][0-9]{4}\t/.test(line)) continue;
     const parts = line.split('\t');
     if (parts.length < 8) throw Error('Malformed source record');
     const [strong, disambiguated, , lemma, , , gloss] = parts;
     const id = parseStrongId(strong.replace(/^([GH])0+([1-9])/, '$1$2'));
-    if (!id || !lemma.trim() || !gloss.trim() || !/^[GH]\d{4}[A-Z]?/.test(disambiguated)) throw Error('Invalid source record');
+    if (!id || !/^[GH]\d{4}[A-Z]?/.test(disambiguated)) throw Error('Invalid source record');
+    parsed++;
+    if (!lemma.trim() || !gloss.trim()) {
+      incomplete.push({ id, disambiguated: disambiguated.trim(), reason: !lemma.trim() ? 'missing lemma' : 'missing gloss' });
+      continue;
+    }
     const list = grouped.get(id) ?? [];
     list.push({ id, lemma: lemma.trim(), gloss: gloss.trim().replace(/\s+/g, ' '), disambiguated: disambiguated.trim() });
-    grouped.set(id, list); parsed++;
+    grouped.set(id, list);
   }
   if (parsed === 0) throw Error('No real lexicon entries found');
-  const rows = [], excluded = [];
+  const rows = [], excluded = [...incomplete];
   for (const [id, entries] of grouped) {
     // Include only IDs with ONE documented source row. Multiple extended
     // Strong distinctions require the future disambiguated-identifier schema.

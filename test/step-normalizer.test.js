@@ -34,3 +34,17 @@ test('Hebrew extended senses are never merged into one Strong gloss', () => {
 test('changed input column layout fails closed', () => {
   assert.throws(()=>normalizeStepBriefLexicon('G0026\tbad','G'),/header/);
 });
+
+test('missing lemma is excluded but valid rows remain importable', () => {
+  const raw = [
+    'eStrong\tdStrong\tuStrong\tGreek\tTransliteration\tMorph\tGloss\tMeaning',
+    'G2199\tG2199H =\tG2199H\t\t\tN:N-F-P\t[wife of Zebedee]\tentry',
+    'G0026\tG0026 =\tG0026\tἀγάπη\tagapē\tG:N-F\tlove\tentry',
+  ].join('\n');
+  const { normalized, audit } = normalizeStepBriefLexicon(raw, 'G');
+  assert.equal(audit.sourceRecords, 2);
+  assert.equal(audit.imported, 1);
+  assert.equal(audit.excluded, 1);
+  assert.equal(audit.exclusions[0].reason, 'missing lemma');
+  assert.match(normalized, /G26\tἀγάπη\tlove/);
+});
