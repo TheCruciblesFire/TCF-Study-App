@@ -9,7 +9,6 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeployTrigger: checksPass
-    maxShutdownDelaySeconds: 180
     disk:
       name: tcf-study-data
       mountPath: /var/data/tcf
