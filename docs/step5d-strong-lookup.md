@@ -1,30 +1,31 @@
-# Step 5d — optional Strong's lookup deployment
+# Step 5d — bundled Strong's lookup deployment
 
-This read-only feature is **disabled by default**. The successful manual
-STEPBible workflow produces four files in its artifact ZIP: `G.json`, `H.json`,
-`G.audit.json`, and `H.audit.json`.
+The Docker image now builds the reviewed STEPBible indexes from immutable, pinned
+upstream source blobs and packages all four output files. **No Render Shell upload,
+persistent-disk copy, or GitHub artifact download is necessary.**
 
-1. Download the artifact from a successful run **after PR #22** and inspect its audit.
-2. Put all four files into a persistent, private directory available inside the
-   application container (for example, a securely provisioned Render persistent
-   disk mounted at `/app/.data/lexicon`). Do not use a directory under `public/`.
-3. Set the server environment variable `LEXICON_DIR` to that directory and
-   restart the service. This is a **manual operator step**, not automatic GitHub
-   Actions deployment. No API keys are included in the files.
-4. On startup, the application checks both index shapes, CC BY 4.0 metadata,
-   entry validation, and corresponding reconciled audit counts. A missing
-   file or failed check prevents startup when enabled.
-5. Verify `/api/config` returns `lexicalLookupEnabled: true` and look up
-   G26, H10, and an unavailable identifier through the displayed lookup form.
-   The production chat study flow is unchanged.
+## Deployment
 
-The endpoint `GET /api/strong/:id` uses existing origin and IP request controls.
-It returns a lexical **lemma and gloss**, not verse-by-verse word alignment,
-original-language exegesis, or a theological claim. No AI request is involved.
-If no reviewed data has been deployed, it returns a 503 response rather than
-inventing lexical content.
+1. Merge the PR after CI review; Render must deploy from the resulting `main` commit.
+2. In Render Environment, remove any previously configured `LEXICON_DIR` override,
+   or set it explicitly to `/app/lexicon`. Do **not** use
+   `/var/data/tcf/lexicon` for the bundled deployment.
+3. Rebuild/redeploy the Docker service. Its builder checks the exact reviewed
+   upstream Git blob hashes, regenerates indexes with audit reconciliation, and
+   fails the build if a blob or audited record changes unexpectedly.
+4. Verify `GET /api/config` contains `lexicalLookupEnabled: true`.
+5. Use the form for `G26` (Greek love), `H10` (Hebrew destruction), and
+   `G2199` (expected unavailable due to incomplete/ambiguous senses).
+6. Verify the ordinary Scripture chat flow still works.
 
-Retain attribution **STEP Bible (https://www.stepbible.org/), CC BY 4.0** and
-the original source links with all redistributed data. Each artifact is retained
-on GitHub Actions only for the configured workflow period; maintain a secure
-backup before it expires.
+`GET /api/strong/:id` is a read-only, rate-limited lookup. Entries carry
+the original STEPBible source URL and **STEP Bible CC BY 4.0** attribution.
+No OpenAI call is required for Strong's-number lookups.
+
+The container image holds the indexes under `/app/lexicon`; the existing
+Render persistent disk at `/var/data/tcf` is unrelated and remains unchanged.
+A future upstream database revision must first update the reviewed blob pins
+and pass the import/audit pipeline before a new image can be built.
+
+**Scope:** These are lexical lemmas and glosses, not verse-specific word
+alignment, contextual exegesis, or guaranteed translations in a passage.
