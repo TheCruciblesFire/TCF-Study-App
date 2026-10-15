@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { createApp } from '../server/app.js';
 import { loadConfig } from '../server/config.js';
-import { createLiveProviders, validateStudy } from '../server/providers.js';
+import { createLiveProviders, validateStudy, validateRouteSources } from '../server/providers.js';
 import { createStore } from '../server/store.js';
 import { createDemoProviders } from '../server/demo.js';
 
@@ -250,4 +250,16 @@ test('citation regression: chapter labels accepted, out-of-range verses and URLs
   const inventedUrl = structuredClone(valid);
   inventedUrl.caveat = 'Visit https://invented.example for sources.';
   assert.throws(() => validateStudy(inventedUrl, sources), /outside the retrieved Scripture/);
+});
+
+
+test('Phase 2: supporting references must be distinct and non-overlapping', () => {
+  const route = supporting => ({ kind: 'passage', question: 'Study the text', main: 'John 15:1–8', supporting });
+  assert.deepEqual(validateRouteSources(route(['John 14:21', 'Galatians 5:22–23'])).supporting, ['John 14:21', 'Galatians 5:22–23']);
+  for (const supporting of [
+    ['John 15:1–8'], ['John 15:5'], ['John 15'],
+    ['Romans 8:38–39', 'Romans 8:39'], ['John 14:21', 'John 14:21'],
+  ]) assert.throws(() => validateRouteSources(route(supporting)), /Supporting passages must be distinct/);
+  assert.throws(() => validateRouteSources(route(['John 0:1'])), /supporting passage was invalid/);
+  assert.deepEqual(validateRouteSources(route(['John 15:9–12'])).supporting, ['John 15:9–12']);
 });
