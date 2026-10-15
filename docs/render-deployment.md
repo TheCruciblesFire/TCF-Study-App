@@ -16,8 +16,8 @@ This configuration uses Render's **paid Starter service and persistent storage**
 | Name | Secure value to supply |
 | --- | --- |
 | `TCF_OPENAI_API_KEY` | A real OpenAI project API key with funded API billing and access to the selected model. |
-| `TCF_BIBLE_API_KEY` | Your API.Bible key with CSB access for this application. |
-| `BIBLE_ID` | The licensed translation ID from your API.Bible account. Use the same CSB ID that was tested, or another translation your agreement authorizes. |
+| `TCF_BIBLE_API_KEY` | Your API.Bible key with access to the selected WEB edition. |
+| `BIBLE_ID` | Current interim edition: `9879dbb7cfe39e4d-01` (World English Bible, WEB). Do not restore CSB without explicit AI-processing authorization. |
 
 Enter keys only in Render's secret/environment fields. Never put them in GitHub, SnapPages, a ZIP, or chat. Codex's network-proxy secret bindings are specific to Codex; do not copy a proxy placeholder into Render. A ChatGPT Business subscription does not supply OpenAI API credits. Check the API project/organization that owns the key, independently of the ChatGPT workspace used to develop the app.
 
@@ -25,6 +25,15 @@ Enter keys only in Render's secret/environment fields. Never put them in GitHub,
 6. Use the actual HTTPS URL shown by Render after deployment. The app automatically derives its public origin from `RENDER_EXTERNAL_URL`; no guessed hostname is hardcoded.
 
 The Blueprint pins Node 24.19.0, sets `APP_MODE=live`, uses `/var/data/tcf` for the persistent database/key, and sets estimated OpenAI limits of USD 2/day, USD 20/month and USD 0.03/turn. These exclude hosting and Bible API charges. `TRUST_PROXY_HOPS=1` assumes Render's reverse proxy is the nearest trusted hop; revisit it if adding another proxy/CDN.
+
+## Verified production configuration (2026-10-15)
+
+- Live service: `https://tcf-study-app.onrender.com/`, embedded via SnapPages (operator confirmed functionality before the WEB switch).
+- `APP_MODE=live`; `BIBLE_ID=9879dbb7cfe39e4d-01` (standard WEB); `DATA_DIR=/var/data/tcf`.
+- An actual Render persistent disk is mounted at `/var/data/tcf`. An earlier service had `DATA_DIR=/app/.data` and no disk; this was corrected manually in Render Environment. **Verify the actual environment settings; a value in `render.yaml` alone does not prove the running service uses it.**
+- `npm run smoke` passed after switching WEB. `npm run usage` displayed one completed study and the same row survived a subsequent service restart while using the persistent disk.
+- CSB licensing for LLM prompt processing was requested and remains unapproved. WEB is the interim public-domain Scripture source; retain the correct WEB translation label and provider attribution.
+- Before declaring the WEB transition fully browser-verified, inspect the WEB source card and complete a follow-up on the published SnapPages embed.
 
 ## Verify the service
 
@@ -39,7 +48,7 @@ The smoke test makes a real, metered John 15 passage study and clears its test c
 
 In the deployed browser, verify:
 
-- John 15:1–8 produces a CSB study and displays the retrieved text, attribution, source links, and explanation/application separately.
+- John 15:1–8 produces a WEB study and displays the retrieved text, attribution, source links, and explanation/application separately.
 - A follow-up such as “How can I apply this today?” stays with the same passage.
 - A different passage and a basic biblical question work.
 - API.Bible's script loads from `https://pkg.api.bible/fumsV3.min.js`, and Scripture usage requests reach `https://fums.api.bible/f3` successfully. These contain opaque usage tokens; do not paste the URLs into chat or issue logs.
@@ -83,4 +92,4 @@ The hosted app and a ZIP preview serve different purposes. The ZIP is a delibera
 
 GitHub Actions checks run without live credentials or paid calls. Render's `checksPass` setting permits subsequent automatic deploys after those checks pass. Keep one replica because active conversation locks are process-local. Persistent disks require the current instance to stop during deployment, so brief downtime is possible. The shutdown window allows in-flight requests to finish before termination.
 
-Render's dashboard validates and creates the Blueprint. No public service, successful Render build, or SnapPages publication is claimed until those steps actually complete. The local Blueprint and instructions were checked against Render's current Blueprint, environment-variable, Node-version and Deploy-to-Render documentation.
+Render's dashboard validates and creates the Blueprint. The service is now live, has passed operator-run smoke tests, and has been embedded in SnapPages. This guide distinguishes those operator-confirmed results from unverified browser checks. The Blueprint and instructions were checked against Render deployment documentation.
