@@ -12,6 +12,9 @@ test('read-only lookup distinguishes found, omitted and invalid Strong identifie
  const db = { G: fake('G','G26'), H: fake('H','H10') };
  assert.equal(lookupStrong(db,'g026').lemma, 'ἀγάπη');
  assert.equal(lookupStrong(db,'H10').gloss, 'destruction');
+ assert.equal(lookupStrong(db,'H0010').id, 'H10');
+ assert.equal(lookupStrong(db,'G0000').error, 'INVALID_STRONG');
+ assert.equal(lookupStrong(db,'G0026junk').error, 'INVALID_STRONG');
  assert.equal(lookupStrong(db,'G2199').available,false);
  assert.equal(lookupStrong(db,'G6000').error,'INVALID_STRONG');
  assert.equal(lookupStrong(null,'G26').error,'LEXICON_UNAVAILABLE');
