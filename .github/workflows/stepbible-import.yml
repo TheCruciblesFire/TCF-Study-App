@@ -1,0 +1,47 @@
+name: Build STEPBible Lexical Index (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lexical-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Checkout upstream STEPBible data
+        run: |
+          git clone --depth 1 https://github.com/STEPBible/STEPBible-Data.git /tmp/step-data
+          cd /tmp/step-data
+          git rev-parse HEAD > /tmp/step-commit.txt
+      - name: Build pinned indexes, rejecting unexpected source changes
+        run: |
+          mkdir -p output
+          node --input-type=module <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import { buildFullLexicon } from './scripts/build-full-step.js';
+          const commit=readFileSync('/tmp/step-commit.txt','utf8').trim();
+          for(const [language,filename,expected] of [
+            ['G','TBESG - Translators Brief lexicon of Extended Strongs for Greek - STEPBible.org CC BY.txt','efe271a1dbb73fa01f8fa6e0f164c6687757a9ae'],
+            ['H','TBESH - Translators Brief lexicon of Extended Strongs for Hebrew - STEPBible.org CC BY.txt','a64990a674d13245ae1e9ed426bc69197c2fbad5']
+          ]) {
+            const path='Lexicons/'+filename;
+            const blob=execFileSync('git',['-C','/tmp/step-data','rev-parse','HEAD:'+path],{encoding:'utf8'}).trim();
+            if(blob!==expected) throw Error('Source blob changed for '+language+'; review new upstream data before importing');
+            const raw=readFileSync('/tmp/step-data/'+path,'utf8');
+            const sourceUrl='https://github.com/STEPBible/STEPBible-Data/blob/'+commit+'/'+encodeURIComponent(path).replaceAll('%2F','/');
+            const result=buildFullLexicon(raw,{language,blobSha:blob,commit,sourceUrl});
+            writeFileSync('output/'+language+'.json',JSON.stringify(result.index));
+            writeFileSync('output/'+language+'.audit.json',JSON.stringify(result.audit,null,2));
+            console.log(language, 'imported', result.audit.imported,'excluded',result.audit.excluded);
+            if(result.audit.imported<1000) throw Error('Unexpectedly low import count');
+          }
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stepbible-verified-offline-indexes
+          path: output/
+          retention-days: 14
