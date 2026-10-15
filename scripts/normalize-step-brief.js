@@ -17,11 +17,19 @@ export function normalizeStepBriefLexicon(raw, language) {
     const parts = line.split('\t');
     if (parts.length < 8) throw Error('Malformed source record');
     const [strong, disambiguated, , lemma, , , gloss] = parts;
-    const id = parseStrongId(strong.replace(/^([GH])0+([1-9])/, '$1$2'));
-    if (!id || !/^[GH]\d{4}[A-Z]?/.test(disambiguated)) throw Error('Invalid source record');
+    // Source has G0001, G0001G, and out-of-range G6000 extensions.
+    // Validate the column shape before applying our narrower Strong ID limit.
+    if (strong.length !== 5 || strong[0] !== language ||
+        !/^[0-9]{4}$/.test(strong.slice(1)) ||
+        !disambiguated.startsWith(strong) ||
+        ![' ', '='].includes(disambiguated[strong.length] ?? '')) {
+      throw Error('Malformed STEP source identifier');
+    }
     parsed++;
-    if (!lemma.trim() || !gloss.trim()) {
-      incomplete.push({ id, disambiguated: disambiguated.trim(), reason: !lemma.trim() ? 'missing lemma' : 'missing gloss' });
+    const id = parseStrongId(language + String(Number(strong.slice(1))));
+    if (!id || !lemma.trim() || !gloss.trim()) {
+      incomplete.push({ id: id ?? strong, disambiguated: disambiguated.trim(),
+        reason: !id ? 'extended ID outside supported Strong range' : !lemma.trim() ? 'missing lemma' : 'missing gloss' });
       continue;
     }
     const list = grouped.get(id) ?? [];
