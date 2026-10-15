@@ -21,6 +21,7 @@ const schema = z.object({
   REQUESTS_PER_DAY: z.coerce.number().int().min(1).max(1000).default(40),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
   DATA_DIR: z.string().default('.data'),
+  LEXICON_DIR: z.string().default(''),
 });
 export function loadConfig(env = process.env) {
   const parsed = schema.safeParse({ ...env,
@@ -34,6 +35,7 @@ export function loadConfig(env = process.env) {
   }
   config.secureCookies = new URL(config.PUBLIC_ORIGIN).protocol === 'https:';
   config.dataDir = resolve(config.DATA_DIR);
+  if (config.LEXICON_DIR) config.LEXICON_DIR = resolve(config.LEXICON_DIR);
   if (config.APP_MODE === 'live') {
     const missing = ['TCF_OPENAI_API_KEY', 'TCF_BIBLE_API_KEY', 'BIBLE_ID'].filter(k => !config[k]);
     if (missing.length) throw new Error(`Live mode requires: ${missing.join(', ')}`);
