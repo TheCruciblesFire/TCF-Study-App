@@ -19,18 +19,21 @@ export function normalizeStepBriefLexicon(raw, language) {
     const [strong, disambiguated, , lemma, , , gloss] = parts;
     // Source has G0001, G0001G, and out-of-range G6000 extensions.
     // Validate the column shape before applying our narrower Strong ID limit.
-    if (strong.length !== 5 || strong[0] !== language ||
-        !/^[0-9]{4}$/.test(strong.slice(1)) ||
-        !disambiguated.startsWith(strong) ||
-        !([' ', '='].includes(disambiguated[strong.length] ?? '') ||
-          (/[A-Z]/.test(disambiguated[strong.length] ?? '') && disambiguated[strong.length + 1] === ' '))) {
-      throw Error('Malformed STEP source identifier');
+    // Parse source columns separately. dStrong may represent another number
+    // or an extended upper/lowercase suffix; never infer an alias mapping.
+    if (!/^[GH][0-9]{4}$/.test(strong) || strong[0] !== language ||
+        !/^[GH][0-9]{4}[A-Za-z]?(?:[ =]|$)/.test(disambiguated)) {
+      throw Error('Malformed STEP source identifier: ' + strong + ' / ' + disambiguated);
     }
     parsed++;
     const id = parseStrongId(language + String(Number(strong.slice(1))));
-    if (!id || !lemma.trim() || !gloss.trim()) {
+    const alias = !disambiguated.startsWith(strong) ||
+      /^[a-z]$/.test(disambiguated[strong.length] ?? '');
+    if (alias || !id || !lemma.trim() || !gloss.trim()) {
       incomplete.push({ id: id ?? strong, disambiguated: disambiguated.trim(),
-        reason: !id ? 'extended ID outside supported Strong range' : !lemma.trim() ? 'missing lemma' : 'missing gloss' });
+        reason: alias ? 'extended alias or lowercase identifier; requires reviewed mapping' :
+          !id ? 'extended ID outside supported Strong range' :
+          !lemma.trim() ? 'missing lemma' : 'missing gloss' });
       continue;
     }
     const list = grouped.get(id) ?? [];
