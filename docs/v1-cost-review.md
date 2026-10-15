@@ -8,6 +8,9 @@ Reviewed 2026-10-15. This is a configuration/pricing analysis, not access to rea
 Provider pricing: https://developers.openai.com/api/docs/models/gpt-4.1-mini
 Render pricing: https://render.com/pricing
 
+## Observed sample and persistence verification
+On 2026-10-15 after the disk/configuration correction, `npm run usage` reported one completed `gpt-4.1-mini` request: 1,753 input tokens, 879 output tokens, $0.0021076 estimated cost. The identical row appeared following service restart, verifying persistence for that usage record. This is **one sample**, not historical totals or a provider invoice. Earlier ephemeral data may have been lost.
+
 ## Illustrative estimate
 If one answer uses 3,000 input tokens and 1,500 output tokens, estimated model cost is `(3000*0.40 + 1500*1.60)/1,000,000 = $0.0036`, before router calls and retries.
 At the configured monthly $20 model allowance, plus roughly $7/mo for a Starter-equivalent Render service and $0.25/mo for a 1 GB persistent disk, provisional maximum budget allocation is about $27.25/mo before API.Bible licensing/usage, bandwidth, other services and tax. These application budgets are not provider-side hard caps, and configured cost settlement does not necessarily equal invoice charges.
@@ -22,4 +25,4 @@ At the configured monthly $20 model allowance, plus roughly $7/mo for a Starter-
 7. Keep provider-side project budgets/alerts and cloud infrastructure budgets in addition to app limits.
 
 ## Release caution
-Do not increase paid traffic before documenting the right to send the chosen Scripture translation into LLM prompts. The current `gpt-4.1-mini` price listing labels the model as deprecated; plan model migration only after verifying structured-output compatibility and updating cost/test baselines.
+The app was switched from CSB to the standard public-domain WEB (Bible ID `9879dbb7cfe39e4d-01`); the operator reports a passing live smoke test. CSB permission for LLM context was requested but remains pending. Do not switch back to CSB without written authorization. The current `gpt-4.1-mini` price listing labels the model as deprecated; plan model migration only after verifying structured-output compatibility and updating cost/test baselines.
