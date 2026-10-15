@@ -219,3 +219,32 @@ test('unfinished cost reservations survive process-store restarts', () => {
     assert.throws(() => store.reserve(), /usage budget/);
   } finally { store.close(); rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('citation regression: chapter labels accepted, out-of-range verses and URLs rejected', async () => {
+  const demo = createDemoProviders();
+  const route = await demo.route('John 15:1–8', []);
+  const original = await demo.study(route);
+  const sources = [
+    { id: 'S1', reference: 'Hebrews 6:4–8' },
+    { id: 'S2', reference: 'John 10:27–29' },
+    { id: 'S3', reference: 'Romans 8:38–39' },
+  ];
+  const copy = () => structuredClone(original);
+  const valid = copy();
+  for (const section of [valid.context, ...valid.observations, ...valid.interpretation, ...valid.theology, ...valid.connections, ...valid.application]) section.evidence = ['S1'];
+  // A chapter *label* matches a retrieved excerpt; it does not establish all chapter claims.
+  valid.context.text = 'The warning appears in Hebrews 6; compare the retrieved verses in Romans 8.';
+  assert.doesNotThrow(() => validateStudy(valid, sources));
+  const wrongVerse = structuredClone(valid);
+  wrongVerse.context.text = 'Read Romans 8:28 for the explanation.';
+  assert.throws(() => validateStudy(wrongVerse, sources), /outside the retrieved Scripture/);
+  const wrongChapter = structuredClone(valid);
+  wrongChapter.furtherStudy[0] = 'Study Romans 9 for the next step.';
+  assert.throws(() => validateStudy(wrongChapter, sources), /outside the retrieved Scripture/);
+  const unknownId = structuredClone(valid);
+  unknownId.theology[0].evidence = ['S99'];
+  assert.throws(() => validateStudy(unknownId, sources), /unverified reference/);
+  const inventedUrl = structuredClone(valid);
+  inventedUrl.caveat = 'Visit https://invented.example for sources.';
+  assert.throws(() => validateStudy(inventedUrl, sources), /outside the retrieved Scripture/);
+});
