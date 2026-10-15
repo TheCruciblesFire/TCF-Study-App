@@ -17,7 +17,7 @@ export function createApp(config, overrides = {}) {
   const allowedFrames = config.EMBED_ORIGINS.split(/\s+/).filter(Boolean).join(' ');
   app.use((req, res, next) => {
     res.set({
-      'Content-Security-Policy': `default-src 'self'; script-src 'self'${config.APP_MODE === 'live' ? ' https://fums.api.bible' : ''}; style-src 'self'; img-src 'self' data:${config.APP_MODE === 'live' ? ' https://fums.api.bible' : ''}; connect-src 'self'${config.APP_MODE === 'live' ? ' https://fums.api.bible' : ''}; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' ${allowedFrames}`,
+      'Content-Security-Policy': `default-src 'self'; script-src 'self'${config.APP_MODE === 'live' ? ' https://pkg.api.bible' : ''}; style-src 'self'; img-src 'self' data:; connect-src 'self'${config.APP_MODE === 'live' ? ' https://fums.api.bible' : ''}; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' ${allowedFrames}`,
       'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     });
@@ -106,7 +106,7 @@ export function createApp(config, overrides = {}) {
     const status = error instanceof AppError ? error.status : error.status === 413 ? 413 : error.type === 'entity.parse.failed' ? 400 : 500;
     if (status === 429) res.set('Retry-After', '60');
     // Never log messages, prompts, provider bodies, authorization, or session tokens.
-    if (status >= 500) console.error(JSON.stringify({ requestId, status, code: error.code || 'INTERNAL_ERROR' }));
+    if (status >= 500) console.error(JSON.stringify({ requestId, status, code: error.code || 'INTERNAL_ERROR', ...(error.upstream ? { upstream: error.upstream } : {}) }));
     res.status(status).json({ error: { code: error.code || (status === 413 ? 'MESSAGE_TOO_LARGE' : 'REQUEST_ERROR'),
       message: error instanceof AppError ? error.message : status === 413 ? 'Your message is too large.' : status === 400 ? 'Send a valid JSON message.' : 'The study assistant encountered a problem. Please try again.', requestId } });
   });

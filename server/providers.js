@@ -36,7 +36,18 @@ async function getJSON(url, options, fetcher, service) {
   let response;
   try { response = await fetcher(url, { ...options, signal: AbortSignal.timeout(45_000) }); }
   catch { throw new AppError(502, 'PROVIDER_UNAVAILABLE', `${service} is unavailable. Please try again later.`); }
-  if (!response.ok) throw new AppError(502, 'PROVIDER_ERROR', `${service} could not complete the request. Please try again later.`);
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    const knownCodes = new Set(['credit_balance_exhausted', 'insufficient_quota', 'rate_limit_exceeded', 'invalid_api_key', 'invalid_json_schema', 'model_not_found']);
+    const providerCode = knownCodes.has(details.error?.code) ? details.error.code : undefined;
+    const billing = service === 'The AI provider' && response.status === 429 && ['credit_balance_exhausted', 'insufficient_quota'].includes(providerCode);
+    const error = new AppError([401, 403, 429].includes(response.status) ? 503 : 502,
+      billing ? 'AI_BILLING_REQUIRED' : response.status === 429 ? 'PROVIDER_LIMIT' : 'PROVIDER_ERROR',
+      billing ? 'The study service is temporarily unavailable. Please try again later.' : `${service} could not complete the request. Please try again later.`);
+    error.upstream = { service: service === 'The AI provider' ? 'openai' : 'bible', status: response.status, ...(providerCode ? { code: providerCode } : {}) };
+    error.requestRejected = [400, 401, 403, 404, 422, 429].includes(response.status);
+    throw error;
+  }
   try { return await response.json(); } catch { throw new AppError(502, 'PROVIDER_ERROR', `${service} returned an unreadable response.`); }
 }
 function cleanText(text) { return text.replace(/<[^>]*>/g, '').replace(/\u0000/g, '').trim(); }
@@ -70,11 +81,18 @@ export function createLiveProviders(config, fetcher = fetch) {
     const upper = (maxInput * config.INPUT_USD_PER_MILLION + maxTokens * config.OUTPUT_USD_PER_MILLION) / 1e6;
     if (meter.cost + upper > config.MAX_TURN_USD) throw new AppError(422, 'TURN_TOO_LARGE', 'This study exceeds the per-request budget. Please choose a shorter passage.');
     meter.cost += upper; // Retain this charge if the provider outcome is unknown.
-    const data = await getJSON('https://api.openai.com/v1/chat/completions', {
+    let data;
+    try { data = await getJSON('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { Authorization: `Bearer ${config.TCF_OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: config.OPENAI_MODEL, messages, max_completion_tokens: maxTokens,
+      body: JSON.stringify({ model: config.OPENAI_MODEL, messages, store: false, max_completion_tokens: maxTokens,
         response_format: { type: 'json_schema', json_schema: { name: 'study_response', strict: true, schema } } }),
     }, fetcher, 'The AI provider');
+    } catch (error) {
+      // Explicit API rejection did not generate tokens. Unknown network/server
+      // outcomes keep their conservative allowance rather than being refunded.
+      if (error.requestRejected) meter.cost -= upper;
+      throw error;
+    }
     const usage = data.usage;
     if (!Number.isInteger(usage?.prompt_tokens) || !Number.isInteger(usage?.completion_tokens) || usage.prompt_tokens < 0 || usage.completion_tokens < 0)
       throw new AppError(502, 'PROVIDER_USAGE', 'The AI provider’s usage could not be verified.');

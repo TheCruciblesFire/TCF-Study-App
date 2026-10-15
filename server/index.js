@@ -10,6 +10,6 @@ try {
   server.requestTimeout = 180_000;
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
     server.close(() => { store.close(); process.exit(0); });
-    setTimeout(() => process.exit(1), 10_000).unref();
+    setTimeout(() => process.exit(1), 170_000).unref();
   });
 } catch (error) { console.error(error.message); process.exitCode = 1; }

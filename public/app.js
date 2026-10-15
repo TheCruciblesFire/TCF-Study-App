@@ -43,18 +43,35 @@ async function connect() {
   }
 }
 let reportingReady = false;
-async function loadBibleReporting() {
-  if (reportingReady) return;
-  // API.Bible's first-party FUMS v3 client. Never execute provider-supplied scripts.
-  window._BAPI = window._BAPI || {};
-  window._BAPI.t = window._BAPI.t || [];
-  await new Promise((resolve, reject) => {
+let reportingPromise;
+function loadBibleReporting() {
+  if (reportingReady) return Promise.resolve();
+  if (reportingPromise) return reportingPromise;
+  // Current API.Bible documentation: https://docs.api.bible/resources/fair-use
+  // Only load the fixed first-party client, never a script from Bible content.
+  window.fumsData = window.fumsData || [];
+  window.fums = window.fums || function () { window.fumsData.push(arguments); };
+  const queuedReporter = window.fums;
+  reportingPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://fums.api.bible/f3.js'; script.async = true;
-    script.onload = () => { reportingReady = true; resolve(); };
-    script.onerror = () => { script.remove(); reject(new Error('Required Bible usage reporting could not load. Check content blocking and reconnect.')); };
+    script.src = 'https://pkg.api.bible/fumsV3.min.js'; script.async = true;
+    let finished = false;
+    const finish = error => {
+      if (finished) return;
+      finished = true; clearTimeout(timer);
+      if (error) { script.remove(); reject(error); }
+      else { reportingReady = true; resolve(); }
+    };
+    const failure = () => new Error('Required Bible usage reporting could not initialize. Allow the Bible provider’s script and browser storage, then reconnect.');
+    const timer = setTimeout(() => finish(failure()), 15_000);
+    script.onload = () => finish(typeof window.fums === 'function' && window.fums !== queuedReporter ? null : failure());
+    script.onerror = () => finish(failure());
     document.head.append(script);
+  }).catch(error => {
+    reportingPromise = undefined;
+    throw error;
   });
+  return reportingPromise;
 }
 function sourceCard(source, turnId) {
   const details = el('details', 'source-card'); details.id = `${turnId}-${source.id}`;
@@ -92,8 +109,8 @@ function renderAnswer(answer, mount, turnId) {
   label.append(document.createTextNode('TCF STUDY ASSISTANT'));
   const card = el('div', 'answer-card'); mount.append(label, card);
   if (!answer.study) { card.append(el('p', 'answer-message', answer.message)); return; }
-  if (answer.mode === 'live') for (const source of answer.sources) {
-    if (source.fumsToken && reportingReady) window._BAPI.t.push(['trackView', source.fumsToken]);
+  if (answer.mode === 'live' && reportingReady) {
+    window.fums('trackView', answer.sources.map(source => source.fumsToken).filter(Boolean));
   }
   card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'SCRIPTURE-GROUNDED STUDY'}`), el('h2', '', answer.study.title));
   const sections = [['Passage & context', [answer.study.context]], ['Observe the text', answer.study.observations], ['Understand in context', answer.study.interpretation], ['Theological conclusions', answer.study.theology], ['Christ & the wider story', answer.study.connections], ['Put it into practice', answer.study.application]];
@@ -109,6 +126,12 @@ function renderAnswer(answer, mount, turnId) {
   const sources = el('div', 'source-list'); sources.append(el('h3', '', 'READ THE SCRIPTURE · VERIFIED SOURCE SET'));
   for (const source of answer.sources) sources.append(sourceCard(source, turnId));
   sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : 'Source base: Scripture retrieved from API.Bible. Explanation and application are AI-generated synthesis. Linked resources were not consulted. A valid citation does not guarantee that an interpretation is correct.'));
+  if (answer.mode === 'live') {
+    const attribution = el('p', 'source-disclosure', 'Scripture provided by ');
+    const link = el('a', 'source-link', 'API.Bible');
+    link.href = 'https://api.bible'; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    attribution.append(link); sources.append(attribution);
+  }
   card.append(sources);
   const followups = el('div', 'followup-chips');
   for (const text of ['How can I apply this today?', 'Explain the main idea']) {
@@ -169,7 +192,7 @@ $('#privacy-button').addEventListener('click', () => openInfo('Study with care.'
   'The hosted app requires a separate backend and authorized API credentials for live studies. Never put API keys in this demo or in SnapPages.',
 ] : [
   'No visitor account is required, and this app sets no cookies. A temporary session token stays in this page’s memory. Reloading starts a new conversation. Up to six study exchanges are held on the server for 24 hours after your last successful study, with expired conversations removed on the next request.',
-  'In live mode, your question and recent conversation context are sent to OpenAI; selected passage references are sent to API.Bible. API.Bible’s first-party FUMS script reports Scripture usage and may process browser and network information under its own terms. Do not share sensitive personal information. Provider retention and licensing terms also apply.',
+  'In live mode, your question and recent conversation context are sent to OpenAI; selected passage references are sent to API.Bible. Its required FUMS script uses browser local/session storage for device and session identifiers and reports Scripture usage. Provider privacy and retention terms apply. Do not share sensitive personal information.',
   'New study clears the current server conversation. Cost records contain token counts and estimated costs, not conversation text. A keyed hash of your IP address is used temporarily to enforce usage limits.',
   'AI can make mistakes, including attaching a real reference to a weak interpretation. Read the Scripture sources, consider context, and seek trusted pastoral guidance when needed. This assistant is not an emergency or professional counseling service.',
 ]));

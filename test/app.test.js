@@ -92,6 +92,11 @@ test('live mode fails closed without credentials and rejects malformed origins',
   assert.throws(() => loadConfig({ PUBLIC_ORIGIN: 'http://localhost:3000/path' }), /Origins/);
 });
 
+test('Render public URL is used automatically while an explicit custom origin wins', () => {
+  assert.equal(loadConfig({ RENDER_EXTERNAL_URL: 'https://tcf-example.onrender.com' }).PUBLIC_ORIGIN, 'https://tcf-example.onrender.com');
+  assert.equal(loadConfig({ RENDER_EXTERNAL_URL: 'https://tcf-example.onrender.com', PUBLIC_ORIGIN: 'https://study.example.org' }).PUBLIC_ORIGIN, 'https://study.example.org');
+});
+
 test('live provider contract: route, authorized retrieval, generation, attribution, usage', async t => {
   const config = loadConfig(liveEnv);
   const demo = createDemoProviders();
@@ -103,6 +108,7 @@ test('live provider contract: route, authorized retrieval, generation, attributi
     if (url.includes('api.openai.com')) {
       const body = JSON.parse(options.body);
       assert.equal(body.model, 'gpt-4.1-mini'); assert.equal(body.response_format.json_schema.strict, true);
+      assert.equal(body.store, false);
       assert.ok(options.headers.Authorization.startsWith('Bearer '));
       const data = calls.filter(c => c.url.includes('api.openai.com')).length === 1
         ? { kind: 'passage', question: 'Study John 15:1–8', main: 'John 15:1–8', supporting: ['John 14:21', 'Galatians 5:22–23'] } : preparedStudy;
@@ -161,6 +167,20 @@ test('provider outages retain a conservative usage charge and return sanitized e
   const response = await post('John 15:1–8'); assert.equal(response.status, 502);
   const body = await response.text(); assert.ok(!body.includes('SECRET-SHOULD-NOT-LEAK'));
   assert.equal(store.summary()[0].status, 'failed'); assert.ok(store.summary()[0].estimated_usd > 0);
+});
+
+test('exhausted OpenAI credits produce a useful status without leaking provider bodies or charging rejected tokens', async t => {
+  const config = loadConfig(liveEnv);
+  const providers = createLiveProviders(config, async () => Response.json({ error: {
+    code: 'credit_balance_exhausted', type: 'insufficient_quota', message: 'PRIVATE-PROVIDER-DETAIL',
+  } }, { status: 429 }));
+  const { post, store } = await fixture(t, liveEnv, { providers });
+  const response = await post('John 15:1–8');
+  assert.equal(response.status, 503);
+  const body = await response.text(); assert.ok(!body.includes('PRIVATE-PROVIDER-DETAIL'));
+  assert.equal(JSON.parse(body).error.code, 'AI_BILLING_REQUIRED');
+  assert.equal(store.summary()[0].estimated_usd, 0);
+  assert.equal(store.summary()[0].status, 'failed');
 });
 
 test('named references and URLs cannot introduce unverified sources through prose', async () => {

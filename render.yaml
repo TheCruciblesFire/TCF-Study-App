@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: tcf-study-assistant
+    runtime: node
+    branch: main
+    plan: starter
+    numInstances: 1
+    buildCommand: npm ci --omit=dev --no-audit --no-fund
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 180
+    disk:
+      name: tcf-study-data
+      mountPath: /var/data/tcf
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: APP_MODE
+        value: live
+      - key: DATA_DIR
+        value: /var/data/tcf
+      - key: TRUST_PROXY_HOPS
+        value: '1'
+      - key: EMBED_ORIGINS
+        value: https://thecruciblesfire.org https://www.thecruciblesfire.org
+      - key: DAILY_BUDGET_USD
+        value: '2'
+      - key: MONTHLY_BUDGET_USD
+        value: '20'
+      - key: MAX_TURN_USD
+        value: '0.03'
+      - key: TCF_OPENAI_API_KEY
+        sync: false
+      - key: TCF_BIBLE_API_KEY
+        sync: false
+      - key: BIBLE_ID
+        sync: false

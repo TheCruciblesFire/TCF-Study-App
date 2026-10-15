@@ -23,7 +23,9 @@ const schema = z.object({
   DATA_DIR: z.string().default('.data'),
 });
 export function loadConfig(env = process.env) {
-  const parsed = schema.safeParse(env);
+  const parsed = schema.safeParse({ ...env,
+    PUBLIC_ORIGIN: env.PUBLIC_ORIGIN || env.RENDER_EXTERNAL_URL || 'http://localhost:3000',
+  });
   if (!parsed.success) throw new Error(`Invalid configuration: ${parsed.error.issues.map(i => i.path.join('.')).join(', ')}`);
   const config = parsed.data;
   for (const value of [config.PUBLIC_ORIGIN, ...config.EMBED_ORIGINS.split(/\s+/).filter(Boolean)]) {

@@ -2,7 +2,13 @@
 
 A Scripture-centered, embeddable study companion for The Crucible’s Fire. The first workflow covers a passage or basic biblical question, retrieved Scripture, structured study, and follow-up conversation. No visitor account is required.
 
-**Current status:** local demo and automated provider-contract tests work without keys. Real OpenAI/API.Bible calls and production hosting require the configuration below and a live acceptance check. Demo answers are prepared examples, not live AI responses.
+**Current status:** the live request path and Render deployment configuration are implemented. Real CSB retrieval and the current Scripture reporting client have been checked; full generated-study acceptance remains required once OpenAI API billing is active. Automated tests use fixtures, and ZIP previews remain prepared examples rather than live AI responses.
+
+## Deploy the API version
+
+[Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FTheCruciblesFire%2FTCF-Study-App)
+
+See the [Render deployment guide](docs/render-deployment.md) for the paid service/disk configuration, secure credentials, API billing, readiness checks and SnapPages embedding. Keys must be entered securely in the host; they are not included in this repository or the preview packages.
 
 ## Download the packaged preview
 
@@ -57,11 +63,11 @@ Copy `.env.example` to `.env` locally, or use your host’s secret manager. Neve
 
 The model defaults to `gpt-4.1-mini` with structured JSON output. `OPENAI_MODEL` must support Chat Completions, `max_completion_tokens`, and strict `json_schema`. Model pricing is separately configurable; confirm current provider prices when choosing a model. Do not select a more expensive model without updating both price settings.
 
-API.Bible text comes from the current `https://rest.api.bible/v1` API. Content requests include their required usage-reporting tokens. In live mode the browser loads the first-party FUMS v3 script from `https://fums.api.bible/f3.js` and queues a `trackView` for each source displayed in a study. The app blocks live chat if that script fails to load and rejects content without its usage token. The FUMS browser integration still needs verification against your live account before launch; automated tests cannot establish third-party reporting receipt. No scripts returned in API content are executed.
+API.Bible text comes from `https://rest.api.bible/v1`. Content requests include their required usage-reporting tokens. The browser loads the current first-party client from `https://pkg.api.bible/fumsV3.min.js` and calls `fums('trackView', tokens)` for displayed study sources. Reports go to `https://fums.api.bible/f3`. The app blocks live chat if that client fails to initialize and rejects content without its usage token. No scripts returned in Bible content are executed. The [verification notes](docs/live-verification.md) distinguish real reporting checks from fixture-based tests and generated-study checks that remain pending.
 
 **Translation permission is a launch prerequisite.** The KV upstream prefers CSB, but this app uses only the explicitly configured authorized translation. It does not assume API access grants CSB/public-web or AI-processing rights. Confirm your API.Bible plan permits this public chatbot, transmission of passage text to OpenAI, applicable verse/usage limits, and required attribution/reporting. If TCF has ministry-specific Holman/CSB permission, check its exact conditions and required wording before using CSB. The app displays the provider’s translation abbreviation, copyright, and information text with each source. It does not invent permission wording. Demo fixtures use KJV with a US public-domain notice; review territorial rights before public distribution.
 
-Backend egress: `api.openai.com` and `rest.api.bible`. Visitor browsers also need `fums.api.bible` in live mode. Blue Letter Bible links point to `www.blueletterbible.org` and explicitly open the KJV; this does not change the app’s configured translation. Linked external resources are not represented as research sources consulted by the AI.
+Backend egress: `api.openai.com` and `rest.api.bible`. Visitor browsers also need `pkg.api.bible` and `fums.api.bible` in live mode. The reporting client uses local/session storage for device/session identifiers; conversation tokens remain in memory. Blue Letter Bible links explicitly open the KJV; this does not change the app’s configured translation. Linked resources are not represented as research sources consulted by the AI. On Render, the app uses `RENDER_EXTERNAL_URL` automatically if no explicit `PUBLIC_ORIGIN` is supplied.
 
 ## Workflow and source controls
 
