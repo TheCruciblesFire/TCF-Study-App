@@ -34,3 +34,17 @@ test('Hebrew extended senses are never merged into one Strong gloss', () => {
 test('changed input column layout fails closed', () => {
   assert.throws(()=>normalizeStepBriefLexicon('G0026\tbad','G'),/header/);
 });
+
+test('authentic Greek G2199H missing lemma is excluded with an audit trail', () => {
+  const realShape = [
+    'eStrong\tdStrong\tuStrong\tGreek\tTransliteration\tMorph\tGloss\tMeaning',
+    'G2199\tG2199H =\tG2199H\t\t\tN:N-F-P\t[wife of Zebedee]\tentry',
+    'G0026\tG0026 =\tG0026\tἀγάπη\tagapē\tG:N-F\tlove\tentry',
+  ].join('\n');
+  const { normalized, audit } = normalizeStepBriefLexicon(realShape, 'G');
+  assert.match(normalized, /G26\tἀγάπη\tlove/);
+  assert.doesNotMatch(normalized, /G2199\t/);
+  assert.equal(audit.sourceRecords, 2);
+  assert.equal(audit.excluded, 1);
+  assert.deepEqual(audit.exclusions[0], { id: 'G2199', disambiguated: 'G2199H =', reason: 'missing lemma' });
+});
