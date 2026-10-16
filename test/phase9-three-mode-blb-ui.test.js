@@ -25,3 +25,5 @@ test('BLB mode hides composer/starters; existing modes and new-study reset remai
  assert.match(js,/setStudyMode\('explore'\)/);
  assert.match(css,/#blb-gateway\[hidden\]/);
 });
+
+test('BLB site fallback is voluntary and never refreshes external pages',()=>{assert.match(html,/open Blue Letter Bible directly/);assert.match(html,/class="blb-fallback-note"/);assert.doesNotMatch(js,/location\.reload\(/);});
