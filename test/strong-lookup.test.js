@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lookupStrong, loadLexicalIndexes } from '../server/strong-lookup.js';
+import { lookupStrong, loadLexicalIndexes, searchEnglishGloss } from '../server/strong-lookup.js';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,4 +30,24 @@ test('optional loader validates both lexical indexes and reconciled audit files'
   writeFileSync(join(dir,'H.audit.json'),JSON.stringify({ language:'H', reconciled:false, imported:1, sourceRecords:2, excludedSourceRecords:1 }));
   assert.throws(()=>loadLexicalIndexes(dir),/integrity/);
  } finally { rmSync(dir,{recursive:true,force:true}); }
+});
+
+test('English gloss search returns Greek and Hebrew candidates without verse alignment claims', () => {
+ const db = {
+   G: { entries: {
+     G26: { id:'G26', lemma:'ἀγάπη', gloss:'love' },
+     G25: { id:'G25', lemma:'ἀγαπάω', gloss:'to love' },
+     G999: { id:'G999', lemma:'unused', gloss:'glove' }
+   }},
+   H: { entries: { H157: { id:'H157', lemma:'אָהַב', gloss:'to love' } }}
+ };
+ const result = searchEnglishGloss(db,'love');
+ assert.equal(result.total,3);
+ assert.ok(result.matches.some(x => x.id === 'G26'));
+ assert.ok(result.matches.some(x => x.id === 'H157'));
+ assert.ok(!result.matches.some(x => x.id === 'G999'));
+ assert.match(result.note,/do not identify/);
+ assert.equal(searchEnglishGloss(db,'l').error,'INVALID_SEARCH');
+ assert.equal(searchEnglishGloss(db,'love; DROP').error,'INVALID_SEARCH');
+ assert.equal(searchEnglishGloss(null,'love').error,'LEXICON_UNAVAILABLE');
 });
