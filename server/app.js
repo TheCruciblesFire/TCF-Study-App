@@ -1,3 +1,4 @@
+import { createDiscoveryRouter } from './mcp-discovery.js';
 import { selectSupportingSources } from './relevance.js';
 import { chooseContextReference } from './context.js';
 import { preserveFollowupPassage } from './continuity.js';
@@ -30,6 +31,10 @@ export function createApp(config, overrides = {}) {
     if (config.secureCookies) res.set('Strict-Transport-Security', 'max-age=31536000');
     next();
   });
+  if (config.MCP_DISCOVERY_TOKEN) app.use('/mcp', createDiscoveryRouter({
+    token: config.MCP_DISCOVERY_TOKEN, origin: config.PUBLIC_ORIGIN,
+    rateLimit: ip => store.rateLimit(ip, createHash('sha256').update('mcp-discovery:' + ip).digest('hex')),
+  }));
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     const origin = req.get('origin');

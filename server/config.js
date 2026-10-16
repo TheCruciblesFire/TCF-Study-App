@@ -10,6 +10,7 @@ const schema = z.object({
   EMBED_ORIGINS: z.string().default('https://thecruciblesfire.org https://www.thecruciblesfire.org'),
   TCF_OPENAI_API_KEY: z.string().default(''),
   TCF_BIBLE_API_KEY: z.string().default(''),
+  MCP_DISCOVERY_TOKEN: z.string().default(''),
   BIBLE_ID: z.string().regex(/^[\w-]*$/).default(''),
   OPENAI_MODEL: z.string().regex(/^[\w.:-]+$/).default('gpt-4.1-mini'),
   INPUT_USD_PER_MILLION: money.default(0.4),
@@ -36,6 +37,7 @@ export function loadConfig(env = process.env) {
   config.secureCookies = new URL(config.PUBLIC_ORIGIN).protocol === 'https:';
   config.dataDir = resolve(config.DATA_DIR);
   if (config.LEXICON_DIR) config.LEXICON_DIR = resolve(config.LEXICON_DIR);
+  if (config.MCP_DISCOVERY_TOKEN && config.MCP_DISCOVERY_TOKEN.length < 32) throw new Error('MCP_DISCOVERY_TOKEN must be at least 32 characters');
   if (config.APP_MODE === 'live') {
     const missing = ['TCF_OPENAI_API_KEY', 'TCF_BIBLE_API_KEY', 'BIBLE_ID'].filter(k => !config[k]);
     if (missing.length) throw new Error(`Live mode requires: ${missing.join(', ')}`);
