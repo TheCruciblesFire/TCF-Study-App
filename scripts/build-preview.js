@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 // Produce an offline demo from the actual UI and curated fixtures, without
 // server dependencies, provider credentials, or external asset requests.
 const read = path => readFileSync(path, 'utf8');
-const standaloneModule = path => read(path).replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
+const standaloneModule = path => read(path).replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
 const flame = `data:image/png;base64,${readFileSync('public/brand/flame.png').toString('base64')}`;
 const css = read('public/styles.css').replace(/url\(['"]?(\/fonts\/[^)'"\s]+)['"]?\)/g, (_match, path) =>
   `url("data:font/ttf;base64,${readFileSync(`public${path}`).toString('base64')}")`);
