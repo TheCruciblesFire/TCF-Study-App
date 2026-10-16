@@ -10,7 +10,7 @@ test('exactly three accessible top-level approaches, original lookup UI absent',
  assert.doesNotMatch(js,/lexicalForm|strong-form|lexical-tool/);
 });
 test('BLB gateway preserves original GET search and selected translation independent of Bible API',()=>{
- assert.match(html,/action="https:\/\/www\.blueletterbible\.org\/search\/preSearch\.cfm" method="get" target="_blank" rel="noopener noreferrer"/);
+ assert.match(html,/action="https:\/\/www\.blueletterbible\.org\/search\/search\.cfm" method="get" target="_blank" rel="noopener noreferrer"/);
  assert.match(html,/name="Criteria"/);
  assert.match(html,/name="t"/);
  assert.match(html,/<option value="CSB" selected>/);
