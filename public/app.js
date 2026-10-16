@@ -214,7 +214,18 @@ const blbRange = $('#tcf-blb-range');
 const blbForm = document.querySelector('.tcf-blb-form');
 function syncBlbRange() { blbRange.disabled = !blbRange.value.trim(); }
 blbRange.addEventListener('input', syncBlbRange);
-blbForm.addEventListener('submit', syncBlbRange);
+blbForm.addEventListener('submit', event => {
+  event.preventDefault();
+  syncBlbRange();
+  const criteria = $('#tcf-blb-criteria').value.trim();
+  if (!criteria) { $('#tcf-blb-criteria').focus(); return; }
+  const url = new URL('https://www.blueletterbible.org/search/search.cfm');
+  url.searchParams.set('Criteria', criteria);
+  url.searchParams.set('t', $('#tcf-blb-translation').value);
+  if (!blbRange.disabled) url.searchParams.set('cscs', blbRange.value.trim());
+  // A synchronous, user-initiated browser navigation; no hidden form POST or refresh.
+  window.open(url.href, '_blank', 'noopener,noreferrer');
+});
 syncBlbRange();
 document.querySelectorAll('[data-study-mode]').forEach(button => button.addEventListener('click', () => setStudyMode(button.dataset.studyMode)));
 setStudyMode('explore');
