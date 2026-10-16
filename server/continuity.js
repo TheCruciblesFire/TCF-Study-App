@@ -1,11 +1,11 @@
-import { parseReference } from './references.js';
+import { parseReference, findReferences } from './references.js';
 import { validateRouteSources } from './providers.js';
 
 // A narrow, deterministic guardrail for explicit follow-ups. New subjects and
 // explicit passages remain under the regular router. Never use stale history
 // when a user has supplied a new Scripture reference.
 export function continuingPassage(message, history) {
-  if (typeof message !== 'string' || parseReference(message)) return null;
+  if (typeof message !== 'string' || findReferences(message).length) return null;
   const text = message.trim().toLowerCase();
   const refersBack = /\b(this|that|those|these|it|its|here|there|previous|earlier|same|above|passage|chapter|verse|verses)\b/.test(text) ||
     /^(how (can|do|does) (i|we) apply|explain (more|further)|go deeper|tell me more|what (does|do) (he|she|they) mean)\b/.test(text);
