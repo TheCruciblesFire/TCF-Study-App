@@ -15,6 +15,8 @@ export function validatePinnedReviewCandidates(packet,{sourceCommit}={}) {
      !/^[a-f0-9]{40}$/.test(sourceCommit??'') || packet.sourceCommit!==sourceCommit ||
      !Array.isArray(packet.files) || packet.files.length!==6)
    throw Error('Expected complete pinned unreviewed source packet');
+ if (!packet.files.every(f=>f && typeof f.sourceFile==='string' && f.sourceFile.length>0))
+   throw Error('Missing, duplicated or malformed source evidence');
  const seen=new Set(),results=[];
  for(const e of EXPECTED){
    const file=packet.files.find(f=>f.sourceFile.startsWith(e.filePrefix));
