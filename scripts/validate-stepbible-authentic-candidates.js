@@ -1,3 +1,4 @@
+import {readFileSync,writeFileSync} from 'node:fs';
 // Independently specified structural assertions for the pinned six-source review packet.
 // These are not claims of lexical sense, textual-edition equivalence, or canonical alignment.
 import { parseStepReference } from './stepbible-raw-reference.js';
@@ -40,4 +41,12 @@ export function validatePinnedReviewCandidates(packet,{sourceCommit}={}) {
  }
  return {status:'AUTHENTIC_SOURCE_SHAPES_CHECKED_SEMANTICS_UNREVIEWED',records:results,
    warning:'Literal source observations only. No independent Strong interpretation, morphology decoding, Hebrew reading reconciliation or canonical alignment approved.'};
+}
+
+if(process.argv[1]?.endsWith('/validate-stepbible-authentic-candidates.js')) {
+ const [input,commit,output]=process.argv.slice(2);
+ if(!input||!commit||!output)throw Error('Usage: node scripts/validate-stepbible-authentic-candidates.js CANDIDATES.json COMMIT REPORT.json');
+ const result=validatePinnedReviewCandidates(JSON.parse(readFileSync(input,'utf8')),{sourceCommit:commit});
+ writeFileSync(output,JSON.stringify(result,null,2)+'\n');
+ console.log('Checked '+result.records.length+' authentic structural source records (semantics unreviewed)');
 }
