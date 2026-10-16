@@ -14,7 +14,8 @@ export function formatStudyNotes(answer) {
     ['Christ & the wider story', study.connections],
     ['Put it into practice', study.application],
   ];
-  const lines = ['TCF BIBLE STUDY ASSISTANT', study.title, 'Main passage: ' + answer.sources[0].reference, ''];
+  const lines = ['TCF BIBLE STUDY ASSISTANT', study.title, 'Main passage: ' + answer.sources[0].reference,
+    ...(answer.grounding === 'reference_only' ? ['AI received references and the question, not the Scripture text. Check every prompt against the passage.'] : []), ''];
   for (const [heading, items] of sections) {
     if (!items?.length) continue;
     lines.push(heading);
