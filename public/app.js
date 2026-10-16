@@ -5,6 +5,16 @@ const form = $('#chat-form'), input = $('#question'), sendButton = $('#send-butt
 const conversation = $('#conversation'), welcome = $('#welcome'), status = $('#request-status');
 let config, busy = false;
 let nextTurnId = 0;
+let studyMode = 'explore';
+function setStudyMode(mode) {
+  studyMode = mode === 'guided' ? 'guided' : 'explore';
+  document.querySelectorAll('[data-study-mode]').forEach(button => { button.setAttribute('aria-pressed', String(button.dataset.studyMode === studyMode)); });
+  $('#study-mode-description').textContent = studyMode === 'guided'
+    ? 'Enter a Scripture passage to begin guided Observation → Interpretation → Application. Your reflections remain in this browser tab.'
+    : 'Ask a biblical question or enter a passage below.';
+  input.placeholder = studyMode === 'guided' ? 'Enter a passage, e.g. John 15:1–8…' : 'Enter a passage or ask a biblical question…';
+}
+
 const el = (tag, className, text) => {
   const element = document.createElement(tag);
   if (className) element.className = className;
@@ -135,7 +145,7 @@ function renderAnswer(answer, mount, turnId) {
       heading === 'Put it into practice' ? 2 : -1;
     if (group >= 0) guidedSections[group].push(section);
   }
-  const guide = createInductiveGuide({ sections: guidedSections, reference: answer.sources[0].reference, onStatus: announce });
+  const guide = createInductiveGuide({ sections: guidedSections, reference: answer.sources[0].reference, onStatus: announce, autoStart: studyMode === 'guided' });
   const contextSection = card.querySelector('.answer-section');
   card.insertBefore(guide, contextSection);
   const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
@@ -192,6 +202,8 @@ async function submitMessage(message) {
     retry.addEventListener('click', () => { if (!busy) { turn.remove(); submitMessage(message); } }); turn.append(retry);
   } finally { setBusy(false); input.focus({ preventScroll: true }); }
 }
+document.querySelectorAll('[data-study-mode]').forEach(button => button.addEventListener('click', () => setStudyMode(button.dataset.studyMode)));
+setStudyMode('explore');
 form.addEventListener('submit', event => { event.preventDefault(); submitMessage(input.value.trim()); });
 input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); submitMessage(input.value.trim()); } });
 input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 140)}px`; });
@@ -201,7 +213,7 @@ document.querySelectorAll('[data-new-study]').forEach(button => button.addEventL
   setBusy(true);
   try {
     await request('/api/session/reset', {});
-    conversation.replaceChildren(); conversation.hidden = true; welcome.hidden = false; input.value = ''; input.style.height = ''; announce('A fresh study. Where would you like to begin?');
+    conversation.replaceChildren(); conversation.hidden = true; welcome.hidden = false; setStudyMode('explore'); input.value = ''; input.style.height = ''; announce('A fresh study. Where would you like to begin?');
     window.scrollTo({ top: 0, behavior: 'instant' });
     $('#study-body').scrollTo({ top: 0, behavior: 'instant' });
   } catch (error) { announce(error.message, true); }
