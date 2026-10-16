@@ -11,7 +11,6 @@ test('pins URLs, stages actual bytes and passes independent SHA audit', async ()
  const commit='b'.repeat(40), dir=mkdtempSync(join(tmpdir(),'stepbible-stage-'));
  try {
   const requested=[];
-  const mock=async url => {requested.push(url);return {ok:true,arrayBuffer:async()=>Buffer.from('ref\tform\tlemma\n'.repeat(100)).buffer.slice(Buffer.from('ref\tform\tlemma\n'.repeat(100)).byteOffset,Buffer.from('ref\tform\tlemma\n'.repeat(100)).byteOffset+Buffer.from('ref\tform\tlemma\n'.repeat(100)).length)};};
   // Using Uint8Array bytes avoids any claim about upstream source column layout.
   const sample=new TextEncoder().encode('ref\tform\tlemma\n'.repeat(100));
   const manifest=await stagePinnedSources(commit,dir,{request:async url=>{requested.push(url);return {ok:true,arrayBuffer:async()=>sample.buffer};}});
