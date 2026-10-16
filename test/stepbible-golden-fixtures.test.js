@@ -15,7 +15,7 @@ const source=(dataset,ref,word)=>{
  return {bytes,file,fixture};
 };
 test('Greek and Hebrew checked rows preserve precise source column indices',()=>{
- for (const [dataset,ref,word] of [['TAGNT','Mat.1.001=NKO','λόγος'],['TAHOT','Gen.1.001=Q(k)','בְּרֵאשִׁית']]) {
+ for (const [dataset,ref,word] of [['TAGNT','Mat.1.1#01=NKO','λόγος'],['TAHOT','Gen.1.1#01=Q(k)','בְּרֵאשִׁית']]) {
   const {bytes,file,fixture}=source(dataset,ref,word);
   const result=verifyReviewedFixture(bytes,file,commit,fixture);
   assert.equal(result.verifiedFixtures,1);
@@ -23,7 +23,7 @@ test('Greek and Hebrew checked rows preserve precise source column indices',()=>
  }
 });
 test('rejects unchecked fixtures, mistaken values, and changed raw row digests',()=>{
- const {bytes,file,fixture}=source('TAGNT','Mat.1.001=NKO','λόγος');
+ const {bytes,file,fixture}=source('TAGNT','Mat.1.1#01=NKO','λόγος');
  assert.throws(()=>verifyReviewedFixture(bytes,file,commit,{...fixture,reviewed:false}),/Independent/);
  assert.throws(()=>verifyReviewedFixture(bytes,file,commit,{...fixture,expected:[{...fixture.expected[0],rawRowSha256:'0'.repeat(64)}]}),/digest/);
  assert.throws(()=>verifyReviewedFixture(bytes,file,commit,{...fixture,expected:[{...fixture.expected[0],columnChecks:[{column:2,value:'wrong'}]}]}),/column mismatch/);
