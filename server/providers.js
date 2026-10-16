@@ -70,7 +70,7 @@ export function validateStudy(data, sources, referenceOnly = false) {
   }
   if (referenceOnly) {
     result.data.context.strength = 'reading_prompt';
-    result.data.caveat = 'The AI received passage references and the question, not the Scripture text. Read the displayed passage and verify every suggestion yourself.';
+    result.data.caveat = 'The AI received passage references and the question but did not inspect the Scripture text. Read the displayed passage and verify every suggestion yourself.';
   }
   const sections = [result.data.context, ...result.data.observations, ...result.data.interpretation, ...result.data.theology, ...result.data.connections, ...result.data.application];
   if (sections.some(s => s.evidence.some(id => !ids.has(id)))) throw new AppError(502, 'INVALID_CITATION', 'The study contained an unverified reference. Please try again.');
