@@ -4,6 +4,8 @@ A Scripture-centered, embeddable study companion for The Crucible’s Fire. The 
 
 **Current status:** the live request path and Render deployment configuration are implemented, and the existing Render app responds in live mode. See the [release-readiness record](docs/release-readiness-2026-10-16.md) for independently checked behavior, automated validation, and outstanding licensing, production-generation, and SnapPages acceptance gates. Earlier operator-reported generation success is recorded in the [V1 acceptance history](docs/v1-deployment-acceptance.md). Automated tests use fixtures, and ZIP previews remain prepared examples rather than live AI responses.
 
+**Resuming on another machine?** Start with the [machine handoff](docs/machine-handoff.md) for setup, completed work, remaining gates, and how to regenerate local review evidence.
+
 ## Deploy the API version
 
 [Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FTheCruciblesFire%2FTCF-Study-App)
