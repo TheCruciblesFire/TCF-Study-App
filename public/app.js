@@ -186,12 +186,37 @@ document.querySelectorAll('[data-new-study]').forEach(button => button.addEventL
 const lexicalForm = $('#strong-form');
 lexicalForm.addEventListener('submit', async event => {
   event.preventDefault();
-  const id = $('#strong-id').value.trim();
+  const term = $('#strong-id').value.trim();
   const output = $('#strong-output');
-  output.replaceChildren(el('p', '', 'Checking the verified lexical index…'));
+  output.replaceChildren(el('p', '', 'Searching the verified lexical indexes…'));
+  const strongQuery = /^[gh]0*[1-9][0-9]{0,4}$/i.test(term);
   try {
-    const result = await request('/api/strong/' + encodeURIComponent(id));
+    const result = await request(strongQuery
+      ? '/api/strong/' + encodeURIComponent(term)
+      : '/api/lexicon/search?q=' + encodeURIComponent(term));
     output.replaceChildren();
+    if (!strongQuery) {
+      output.append(el('h3', '', 'English gloss matches: ' + result.query));
+      if (!result.matches.length) output.append(el('p', '', 'No matching English glosses found in the reviewed lexical indexes.'));
+      const list = el('ul', 'lexical-matches');
+      for (const item of result.matches) {
+        const li = el('li');
+        const button = el('button', 'lexical-result-link', item.id + ' · ' + item.lemma);
+        button.type = 'button';
+        button.addEventListener('click', () => {
+          $('#strong-id').value = item.id;
+          lexicalForm.requestSubmit();
+        });
+        li.append(button, el('p', '', item.language + ' · ' + item.gloss));
+        list.append(li);
+      }
+      if (result.matches.length) output.append(list);
+      if (result.total > result.matches.length) output.append(el('p', 'source-disclosure',
+        'Showing ' + result.matches.length + ' of ' + result.total + ' matches. Narrow the English search for more precise results.'));
+      output.append(el('p', 'source-disclosure', result.note),
+        el('p', 'source-disclosure', result.attribution + ' · License: ' + result.license));
+      return;
+    }
     if (!result.available) { output.append(el('p', '', result.message)); return; }
     output.append(el('h3', '', result.id + ' · ' + result.lemma),
       el('p', '', 'Lexical gloss: ' + result.gloss),
