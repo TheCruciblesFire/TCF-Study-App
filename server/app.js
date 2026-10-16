@@ -1,6 +1,7 @@
 import { selectSupportingSources } from './relevance.js';
 import { chooseContextReference } from './context.js';
 import { preserveFollowupPassage } from './continuity.js';
+import { runRoutedStudy } from '../packages/kv-study-engine/router.js';
 import express from 'express';
 import { randomUUID, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -92,37 +93,37 @@ export function createApp(config, overrides = {}) {
       if (!body.success) throw new AppError(400, 'INVALID_MESSAGE', 'Enter a biblical question or passage, using 1–1,500 characters.');
       store.begin(req.studySession.id); began = true;
       if (config.APP_MODE === 'live') reservation = store.reserve();
-      const proposedRoute = await providers.route(body.data.message, req.studySession.history, meter);
-      const route = preserveFollowupPassage(proposedRoute, body.data.message, req.studySession.history);
-      let answer;
-      if (route.kind === 'unsupported') {
-        answer = { mode: config.APP_MODE, kind: route.kind, sources: [], study: null,
-          message: 'I can help with a passage study or a basic biblical question. Full topical surveys, original-language research, commentary searches, and deep dives are not available in this version. Try a specific passage or a narrower question.' };
-      } else {
-        const main = parseReference(route.main);
-        if (!main) throw new AppError(422, 'INVALID_REFERENCE', 'Please specify a single chapter or verse range.');
-        const references = [main.reference];
-        for (const value of route.supporting) {
-          const supporting = parseReference(value);
-          if (!supporting) throw new AppError(502, 'INVALID_REFERENCE', 'A supporting Scripture reference could not be verified. Please try again.');
-          if (!references.includes(supporting.reference)) references.push(supporting.reference);
-        }
-        const sources = [{ ...await providers.bible(references[0]), id: 'S1', role: 'Main passage' }];
-        // The provider might return identical text for two differently named
-        // references; don't present duplicate content as corroboration.
-        const retrievedSupport = [];
-        for (const reference of references.slice(1)) retrievedSupport.push({ ...await providers.bible(reference), role: 'Supporting Scripture' });
-        for (const source of selectSupportingSources(sources[0], retrievedSupport)) sources.push({ ...source, id: `S${sources.length + 1}` });
-        const contextReference = config.APP_MODE === 'live' ? chooseContextReference(main.reference, sources.map(s => s.reference)) : null;
-        if (contextReference) {
-          // Context is helpful but never permitted to block an otherwise valid
-          // study when the provider cannot retrieve the excerpt.
-          try { sources.push({ ...await providers.bible(contextReference), id: `S${sources.length + 1}`, role: 'Immediate context' }); }
-          catch (error) { if (!['INVALID_REFERENCE', 'BIBLE_CONTENT', 'PROVIDER_ERROR'].includes(error.code)) throw error; }
-        }
-        const study = validateStudy(await providers.study(route, sources, meter), sources);
-        answer = { mode: config.APP_MODE, kind: route.kind, sources: explainSources(study, sources), study, ...(route.key ? { demoKey: route.key } : {}) };
-      }
+      const result = await runRoutedStudy({
+        message: body.data.message, history: req.studySession.history, meter, providers,
+        normalizeRoute: (route, message, history) => preserveFollowupPassage(route, message, history),
+        retrieveSources: async route => {
+          const main = parseReference(route.main);
+          if (!main) throw new AppError(422, 'INVALID_REFERENCE', 'Please specify a single chapter or verse range.');
+          const references = [main.reference];
+          for (const value of route.supporting) {
+            const supporting = parseReference(value);
+            if (!supporting) throw new AppError(502, 'INVALID_REFERENCE', 'A supporting Scripture reference could not be verified. Please try again.');
+            if (!references.includes(supporting.reference)) references.push(supporting.reference);
+          }
+          const sources = [{ ...await providers.bible(references[0]), id: 'S1', role: 'Main passage' }];
+          const retrievedSupport = [];
+          for (const reference of references.slice(1)) retrievedSupport.push({ ...await providers.bible(reference), role: 'Supporting Scripture' });
+          for (const source of selectSupportingSources(sources[0], retrievedSupport)) sources.push({ ...source, id: `S${sources.length + 1}` });
+          const contextReference = config.APP_MODE === 'live' ? chooseContextReference(main.reference, sources.map(s => s.reference)) : null;
+          if (contextReference) {
+            try { sources.push({ ...await providers.bible(contextReference), id: `S${sources.length + 1}`, role: 'Immediate context' }); }
+            catch (error) { if (!['INVALID_REFERENCE', 'BIBLE_CONTENT', 'PROVIDER_ERROR'].includes(error.code)) throw error; }
+          }
+          return sources;
+        },
+        verifyStudy: validateStudy,
+      });
+      const { route, sources, study } = result;
+      const answer = !result.workflow.supported
+        ? { mode: config.APP_MODE, kind: 'unsupported', sources: [], study: null,
+            message: 'I can help with a passage study or a basic biblical question. Full topical surveys, original-language research, commentary searches, and deep dives are not available in this version. Try a specific passage or a narrower question.' }
+        : { mode: config.APP_MODE, kind: route.kind, sources: explainSources(study, sources), study,
+            ...(route.key ? { demoKey: route.key } : {}) };
       // Analytics tokens belong only in the immediate response, never stored in history.
       const retained = structuredClone(answer);
       for (const source of retained.sources) delete source.fumsToken;
