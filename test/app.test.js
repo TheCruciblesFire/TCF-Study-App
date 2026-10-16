@@ -301,3 +301,15 @@ test('selection rationales only claim connections substantiated by study evidenc
   assert.match(explainSources(withoutConnection, sources)[1].selectionReason, /does not establish/);
   assert.equal(sources[1].selectionReason, undefined);
 });
+
+test('overlapping supporting references are omitted instead of rejecting 2 Timothy 3:15', () => {
+ const route = validateRouteSources({ kind:'passage', question:'Study 2 Timothy 3:15',
+  main:'2 Timothy 3:15', supporting:['2 Timothy 3:14–17','Psalm 119:105'] });
+ assert.equal(route.main,'2 Timothy 3:15');
+ assert.deepEqual(route.supporting,['Psalms 119:105']);
+ const duplicate = validateRouteSources({ kind:'passage', question:'Study 2 Timothy 3:15',
+  main:'2 Timothy 3:15', supporting:['2 Timothy 3:15','2 Timothy 3:14–16'] });
+ assert.deepEqual(duplicate.supporting,[]);
+ assert.throws(() => validateRouteSources({ kind:'passage', main:'2 Timothy 3:15',
+  supporting:['not a Bible passage'] }), /invalid/i);
+});
