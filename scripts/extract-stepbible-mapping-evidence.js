@@ -1,49 +1,56 @@
-// Phase 9A evidence gate: capture source-defined column headers and redacted
-// row shapes without pretending a field's meaning has been reviewed.
+// Phase 9A: gather redacted evidence from *candidate token rows*, never
+// infer semantic mappings or publish original-language words.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const MAX_HEADER = 48;
-const MAX_SHAPES = 16;
+const LIMIT = 24;
+const reference = /^(?:[1-3]?[A-Za-z]{2,5})\.\d{1,3}\.[^\t=]{1,32}=[A-Za-z()0-9,+-]+$/;
+const heading = /^(?:Eng \(Heb\) Ref & Type|Word & Type|[\w /()&+-]*Ref(?:erence)?[\w /()&+-]*)$/i;
+const describe = s => s.replace(/[\p{L}\p{M}]+/gu, 'A').replace(/\d+/g, '#').slice(0, 75);
+
 export function extractMappingEvidence(raw, dataset) {
-  if (!['TAGNT', 'TAHOT'].includes(dataset)) throw Error('Expected TAGNT or TAHOT');
+  if (!['TAGNT','TAHOT'].includes(dataset)) throw Error('Expected TAGNT or TAHOT');
   if (typeof raw !== 'string' || raw.includes('\uFFFD')) throw Error('Invalid UTF-8 source');
   const lines = raw.replace(/^\uFEFF/, '').split(/\r?\n/);
-  const headers = [];
-  const shapes = new Map();
-  let dataRows = 0;
-  for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
-    const line = lines[lineNumber];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    // Preserve descriptive header lines only, never source word/token contents.
-    // Human review of column meaning must still happen against the pinned sources.
-    if (/^\s*(?:#|\/\/|\$)/.test(line)) {
-      if (headers.length < MAX_HEADER && /(?:column|field|strong|morph|lemma|variant|ketiv|qere|edition|translit|reference)/i.test(line))
-        headers.push({ line: lineNumber + 1, text: line.slice(0, 240) });
+  const counts = {tokenCandidates:0, columnHeadings:0, variantMarkers:0, annotations:0, documentation:0, blank:0};
+  const headings = [], tokenShapes = new Map(), variants = new Map(), rejectedExamples = [];
+  for (let i=0; i<lines.length; i++) {
+    const line=lines[i], cells=line.split('\t'), first=(cells[0] ?? '').trim();
+    if (!line.trim()) {counts.blank++;continue;}
+    if (/^#_Significant variant\b/.test(first)) {
+      counts.variantMarkers++;
+      const key=String(cells.length);
+      variants.set(key,(variants.get(key) ?? 0)+1);
       continue;
     }
-    if (cells.length < 8 || !line.includes('\t')) continue;
-    dataRows++;
-    const reference = cells[0]?.trim() ?? '';
-    // The first-column label is a *shape*, not an asserted verse reference.
-    const pattern = reference.replace(/[0-9]+/g, '#').replace(/[A-Za-z\u0590-\u05ff\u0370-\u03ff]+/g, 'A').slice(0, 60);
-    const key = cells.length + ':' + pattern;
-    if (!shapes.has(key) && shapes.size < MAX_SHAPES) {
-      shapes.set(key, { line: lineNumber + 1, columnCount: cells.length,
-        firstColumnPattern: pattern, nonEmptyColumns: cells.map((c,i) => c.trim() ? i+1 : null).filter(Boolean),
-        columnLengths: cells.map(c => c.length) });
+    if (heading.test(first)) {
+      counts.columnHeadings++;
+      if (headings.length<LIMIT) headings.push({line:i+1,columnCount:cells.length,
+        labels:cells.map((c,j)=>({column:j+1,label:c.trim().slice(0,100)})).filter(x=>x.label)});
+      continue;
     }
+    if (reference.test(first) && cells.length>=8) {
+      counts.tokenCandidates++;
+      const signature=cells.length+':'+describe(first)+':'+cells.map(c=>c.trim()?'1':'0').join('');
+      if (!tokenShapes.has(signature) && tokenShapes.size<LIMIT) tokenShapes.set(signature,{
+        line:i+1,columnCount:cells.length,firstColumnPattern:describe(first),
+        occupiedColumns:cells.map((c,j)=>c.trim()?j+1:null).filter(Boolean),
+        columnLengths:cells.map(c=>c.length)});
+      continue;
+    }
+    if (/^\s*(?:#|\/\/|\$)/.test(first)) counts.annotations++;
+    else counts.documentation++;
+    if (rejectedExamples.length<12) rejectedExamples.push({line:i+1,columnCount:cells.length,firstColumnPattern:describe(first)});
   }
-  return { dataset, headerCandidates: headers, representativeShapes: [...shapes.values()],
-    inspectedDataRows: dataRows, mappingReviewed: false,
-    warning: 'Structural evidence only. Do not infer field semantics, Strong IDs, morphology, textual edition, or verse alignment.' };
+  return {dataset,counts,columnHeadingCandidates:headings,tokenRowShapes:[...tokenShapes.values()],
+    variantMarkerColumnCounts:Object.fromEntries(variants),rejectedRowShapes:rejectedExamples,
+    mappingReviewed:false,warning:'Candidate rows and headings only. No verified column semantics, Strong mapping, textual edition reconciliation, morphology or verse alignment.'};
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const [file, dataset, output] = process.argv.slice(2);
-  if (!file || !dataset || !output) throw Error('Usage: node scripts/extract-stepbible-mapping-evidence.js INPUT.txt TAGNT|TAHOT OUTPUT.json');
-  const raw = new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(file));
-  writeFileSync(output, JSON.stringify(extractMappingEvidence(raw, dataset), null, 2) + '\n');
+ const [file,dataset,output]=process.argv.slice(2);
+ if (!file||!dataset||!output) throw Error('Usage: node scripts/extract-stepbible-mapping-evidence.js INPUT.txt TAGNT|TAHOT OUTPUT.json');
+ const raw=new TextDecoder('utf-8',{fatal:true}).decode(readFileSync(file));
+ writeFileSync(output,JSON.stringify(extractMappingEvidence(raw,dataset),null,2)+'\n');
 }
