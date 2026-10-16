@@ -330,7 +330,7 @@ test('selection rationales only claim connections substantiated by study evidenc
   const sources = [{ id: 'S1', role: 'Main passage' }, { id: 'S2', role: 'Supporting Scripture' }, { id: 'S3', role: 'Supporting Scripture' }, { id: 'S4', role: 'Immediate context' }];
   const reasoned = explainSources(study, sources);
   assert.match(reasoned[0].selectionReason, /Controlling passage/);
-  assert.match(reasoned[1].selectionReason, /cross-reference section/);
+  assert.match(reasoned[1].selectionReason, /listed for the reader to compare/);
   assert.match(reasoned[2].selectionReason, /cross-reference section/);
   assert.match(reasoned[3].selectionReason, /preceding verses/);
   const withoutConnection = structuredClone(study);
