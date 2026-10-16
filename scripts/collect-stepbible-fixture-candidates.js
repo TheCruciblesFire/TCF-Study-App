@@ -9,7 +9,7 @@ import {expectedFiles} from './stepbible-source-audit.js';
 const sha = value => createHash('sha256').update(value).digest('hex');
 const TARGETS = Object.freeze({
  TAGNT: [/^Mat\.1\./,/^Jhn\.1\./,/^Rom\.5\./],
- TAHOT: [/^Gen\.1\./,/^1Sa\.1\./,/^Isa\.53\./]
+ TAHOT: [/^Gen\.1\./,/^1Sa\.1\./,/^Job\.1\./,/^Isa\.53\./]
 });
 export function collectFixtureCandidates(bytes, {name,sha256,sourceCommit}, {perTarget=2}={}) {
  if (!expectedFiles.includes(name) || !/^[a-f0-9]{64}$/.test(sha256??'') ||
