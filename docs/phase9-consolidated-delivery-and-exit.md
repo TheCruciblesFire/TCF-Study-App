@@ -21,10 +21,13 @@ Choose representative uncomplicated NT and OT passages and an explicit source ed
 5. Mechanical exit check passes and independent review evidence is retained.
 6. No production integration until all five are complete.
 
-## Delivery order after PR #61
+## Originally proposed delivery order after PR #61
+
+**Historical note:** The proposed PR numbers below were superseded by implementation history. PR #62 implemented the three-mode UI and BLB gateway and removed the standalone lexical lookup UI. PRs #63–65 addressed BLB navigation reliability; those merges do not establish completion of 9A, 9B, or 9D. Initial-response lexical packets and integrated Key Words cards remain unimplemented. Do not infer milestone completion from PR numbering.
+
 - **#62 — 9C early:** Three-mode UI and the existing branded BLB search gateway. Keep the live study mechanism unchanged; retire UI-only standalone lookup after consumer inventory.
 - **#63 — 9A completion + 9B:** Bounded reviewed verse index and initial-response research packet; graceful omission without source evidence. Split if necessary for meaningful review.
 - **#64 — 9B/9C:** Key Words cards in Ask & Explore and Guided Study; end-to-end Scripture/edition/source/UX/licensing/usage QA.
 - **#65 — 9D:** Staged release with feature flag, rollback and documented route cleanup after consumers are verified.
 
-**Stop condition:** If independent lexical review blocks #63, finish #62 and ship the BLB gateway without fabricated original-language summaries. Do not generate more indefinite 9A inspection PRs.
+**Stop condition:** If independent lexical review blocks 9A completion, retain the shipped BLB gateway without fabricated original-language summaries. Do not generate more indefinite 9A inspection PRs.
