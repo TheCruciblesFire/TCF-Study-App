@@ -5,7 +5,7 @@ export const INDUCTIVE_STAGES = Object.freeze([
   Object.freeze({ title: 'Interpretation', prompt: 'What does the passage mean in its literary context? Which observations support your reading? Note uncertainty rather than assuming a preferred framework.' }),
   Object.freeze({ title: 'Application', prompt: 'In light of what the passage actually teaches, what faithful response may follow? Keep the response specific, gracious, and proportionate.' }),
 ]);
-export function createInductiveGuide({ sections, reference, onStatus = () => {}, autoStart = false, requestFeedback = null, requestInterpretationFeedback = null }) {
+export function createInductiveGuide({ sections, reference, onStatus = () => {}, autoStart = false, requestFeedback = null, requestInterpretationFeedback = null, requestApplicationFeedback = null }) {
   if (!Array.isArray(sections) || sections.length !== 3 || sections.some(group => !Array.isArray(group)))
     throw new TypeError('Expected the three existing study-section groups');
   const el = (tag, cls, text) => {
@@ -117,6 +117,35 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {},
             el('p', '', response.feedback.nextQuestion),
             el('p', 'source-disclosure', response.note));
           if (response.feedback.uncertainty) feedbackArea.append(el('p', 'source-disclosure', response.feedback.uncertainty));
+        } catch (error) { feedbackArea.replaceChildren(el('p', '', error.message)); }
+        finally { button.disabled = false; }
+      });
+      actions.append(button);
+      working.append(step, prompt, label, field, actions, feedbackArea);
+    } else if (stage === 2 && requestApplicationFeedback) {
+      const button = el('button', 'inductive-guide-back', 'Get application feedback');
+      button.type = 'button';
+      const feedbackArea = el('div', 'inductive-feedback');
+      feedbackArea.setAttribute('aria-live', 'polite');
+      button.addEventListener('click', async () => {
+        const entry = field.value.trim();
+        if (entry.length < 10 || entry.length > 1200) {
+          feedbackArea.replaceChildren(el('p', '', 'Write 10–1,200 characters of application notes.'));
+          return;
+        }
+        notes[2] = entry;
+        button.disabled = true;
+        feedbackArea.replaceChildren(el('p', '', 'Reviewing your application in light of the passage…'));
+        try {
+          const response = await requestApplicationFeedback(reference, entry);
+          if (stage !== 2) return;
+          feedbackArea.replaceChildren(
+            el('h4', '', 'Application feedback'),
+            el('p', '', response.feedback.textualAnchor),
+            el('p', '', response.feedback.faithfulResponse),
+            el('p', '', response.feedback.boundary),
+            el('p', '', response.feedback.nextStep),
+            el('p', 'source-disclosure', response.note));
         } catch (error) { feedbackArea.replaceChildren(el('p', '', error.message)); }
         finally { button.disabled = false; }
       });
