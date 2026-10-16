@@ -61,6 +61,12 @@ jobs:
             esac
             node scripts/extract-stepbible-mapping-evidence.js "$f" "$dataset" "source-audit/${n}_mapping-evidence.json"
           done
+      - name: Collect bounded authentic fixture review candidates
+        if: steps.stage.outcome == 'success'
+        env:
+          SOURCE_SHA: ${{ inputs.commit }}
+        run: |
+          node scripts/collect-stepbible-fixture-candidates.js .local-stepbible/"$SOURCE_SHA"/manifest.json source-audit/fixture-review-candidates.json
       - name: Upload inspection reports, never raw sources
         if: always()
         uses: actions/upload-artifact@v4
