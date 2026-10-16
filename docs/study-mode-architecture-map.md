@@ -30,4 +30,4 @@ Do **not** remove existing Scripture source cards, reporting, or free-form follo
 - [Phase 8A mapping](phase8a-shared-kv-engine.md) — historical original skill/architecture inventory, superseded for target UI by this map.
 - [Phase 9 build and acceptance](phase9-roadmap.md).
 - [Guided Study interaction](guided-inductive-study.md) and stage-feedback documents.
-- User-supplied **TCF BLB Search Widget v1.0.1** (299-line attached HTML/CSS source); copy to repository and inspect before implementation.
+- [Original TCF BLB Search Widget v1.0.1](references/tcf-blb-search-widget-v1.0.1.html) — preserved user-supplied HTML/CSS reference; review and adapt for app integration. No live UI change in this PR.
