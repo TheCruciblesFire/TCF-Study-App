@@ -109,7 +109,7 @@ function sourceCard(source, turnId) {
 }
 function paragraphWithEvidence(item, sources, turnId) {
   const p = el('p', '', item.text);
-  const strengthLabels = { direct_text: 'Direct text', contextual_inference: 'Contextual interpretation', theological_synthesis: 'Theological synthesis', pastoral_application: 'Pastoral application' };
+  const strengthLabels = { direct_text: 'Direct text', contextual_inference: 'Contextual interpretation', theological_synthesis: 'Theological synthesis', pastoral_application: 'Pastoral application', reading_prompt: 'Reading prompt' };
   if (strengthLabels[item.strength]) {
     const strength = el('span', 'evidence-strength', strengthLabels[item.strength]);
     strength.setAttribute('title', 'Classification of the reasoning step, not a confidence rating or independent verification.');
@@ -136,12 +136,14 @@ function renderAnswer(answer, mount, turnId) {
   if (answer.mode === 'live' && reportingReady) {
     window.fums('trackView', answer.sources.map(source => source.fumsToken).filter(Boolean));
   }
-  card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'SCRIPTURE-GROUNDED STUDY'}`), el('h2', '', answer.study.title));
+  card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'REFERENCE-GUIDED STUDY'}`), el('h2', '', answer.study.title));
   const sections = [['Passage & context', [answer.study.context]], ['Observe the text', answer.study.observations], ['Understand in context', answer.study.interpretation], ['Theological conclusions', answer.study.theology], ['Christ & the wider story', answer.study.connections], ['Put it into practice', answer.study.application]];
   const guidedSections = [[], [], []];
   for (const [heading, items] of sections) {
     if (!items.length) continue;
-    const section = el('section', 'answer-section'); section.append(el('h3', '', heading));
+    const section = el('section', 'answer-section');
+    const liveHeading = { 'Passage & context': 'Read the passage in context', 'Observe the text': 'What to look for', 'Understand in context': 'Interpretive questions', 'Theological conclusions': 'Theological questions', 'Christ & the wider story': 'Wider story to consider', 'Put it into practice': 'Consider a response' };
+    section.append(el('h3', '', answer.grounding === 'reference_only' ? liveHeading[heading] : heading));
     for (const item of items) section.append(paragraphWithEvidence(item, answer.sources, turnId));
     card.append(section);
     const group = heading === 'Observe the text' ? 0 :
@@ -150,9 +152,9 @@ function renderAnswer(answer, mount, turnId) {
     if (group >= 0) guidedSections[group].push(section);
   }
   const guide = createInductiveGuide({ sections: guidedSections, reference: answer.sources[0].reference, onStatus: announce, autoStart: studyMode === 'guided',
-    requestFeedback: config?.mode === 'live' ? (reference, notes) => request('/api/study/observation-feedback', { reference, notes }) : null,
-    requestInterpretationFeedback: config?.mode === 'live' ? (reference, notes) => request('/api/study/interpretation-feedback', { reference, notes }) : null,
-    requestApplicationFeedback: config?.mode === 'live' ? (reference, notes) => request('/api/study/application-feedback', { reference, notes }) : null });
+    requestFeedback: null,
+    requestInterpretationFeedback: null,
+    requestApplicationFeedback: null });
   const contextSection = card.querySelector('.answer-section');
   card.insertBefore(guide, contextSection);
   const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
@@ -160,7 +162,7 @@ function renderAnswer(answer, mount, turnId) {
   if (answer.study.caveat) card.append(el('p', 'study-caveat', answer.study.caveat));
   const sources = el('div', 'source-list'); sources.append(el('h3', '', 'READ THE SCRIPTURE · VERIFIED SOURCE SET'));
   for (const source of answer.sources) sources.append(sourceCard(source, turnId));
-  sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : 'Source base: Scripture retrieved from API.Bible. Explanation and application are AI-generated synthesis. Linked resources were not consulted. A valid citation does not guarantee that an interpretation is correct.'));
+  sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : 'The CSB passage is displayed from API.Bible. AI receives only your question and passage references; it has not read or verified the displayed Scripture. Treat these items as reading prompts and check every suggestion against the passage. Linked resources were not consulted.'));
   if (answer.mode === 'live') {
     const attribution = el('p', 'source-disclosure', 'Scripture provided by ');
     const link = el('a', 'source-link', 'API.Bible');
@@ -261,9 +263,9 @@ $('#privacy-button').addEventListener('click', () => openInfo('Study with care.'
   'The hosted app requires a separate backend and authorized API credentials for live studies. Never put API keys in this demo or in SnapPages.',
 ] : [
   'No visitor account is required, and this app sets no cookies. A temporary session token stays in this page’s memory. Reloading starts a new conversation. Up to six study exchanges are held on the server for 24 hours after your last successful study, with expired conversations removed on the next request.',
-  'In live mode, your question and recent conversation context are sent to OpenAI; selected passage references are sent to API.Bible. Its required FUMS script uses browser local/session storage for device and session identifiers and reports Scripture usage. Provider privacy and retention terms apply. Do not share sensitive personal information.',
+  'In live mode, your question and recent questions and passage references are sent to OpenAI. API.Bible supplies the CSB text for display in this app; that text is not included in the AI request. Guided Study notes stay in this browser tab, and AI feedback is unavailable. API.Bible’s required FUMS script uses browser local/session storage for device and session identifiers and reports Scripture usage. Provider privacy and retention terms apply. Do not share sensitive personal information.',
   'New study clears the current server conversation. Cost records contain token counts and estimated costs, not conversation text. A keyed hash of your IP address is used temporarily to enforce usage limits.',
-  'AI can make mistakes, including attaching a real reference to a weak interpretation. Read the Scripture sources, consider context, and seek trusted pastoral guidance when needed. This assistant is not an emergency or professional counseling service.',
+  'AI can make mistakes and has not inspected the displayed CSB text. A real reference does not verify a suggested interpretation. Read the Scripture sources, consider context, and seek trusted pastoral guidance when needed. This assistant is not an emergency or professional counseling service.',
 ]));
 dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });

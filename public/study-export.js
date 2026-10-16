@@ -6,15 +6,17 @@ export function formatStudyNotes(answer) {
   }
   const study = answer.study;
   const refs = new Map(answer.sources.map(source => [source.id, source.reference]));
+  const referenceOnly = answer.grounding === 'reference_only';
   const sections = [
-    ['Passage & context', [study.context]],
-    ['Observe the text', study.observations],
-    ['Understand in context', study.interpretation],
-    ['Theological conclusions', study.theology],
-    ['Christ & the wider story', study.connections],
-    ['Put it into practice', study.application],
+    [referenceOnly ? 'Read the passage in context' : 'Passage & context', [study.context]],
+    [referenceOnly ? 'What to look for' : 'Observe the text', study.observations],
+    [referenceOnly ? 'Interpretive questions' : 'Understand in context', study.interpretation],
+    [referenceOnly ? 'Theological questions' : 'Theological conclusions', study.theology],
+    [referenceOnly ? 'Wider story to consider' : 'Christ & the wider story', study.connections],
+    [referenceOnly ? 'Consider a response' : 'Put it into practice', study.application],
   ];
-  const lines = ['TCF BIBLE STUDY ASSISTANT', study.title, 'Main passage: ' + answer.sources[0].reference, ''];
+  const lines = ['TCF BIBLE STUDY ASSISTANT', study.title, 'Main passage: ' + answer.sources[0].reference,
+    ...(referenceOnly ? ['AI received references and the question, not the Scripture text. Check every prompt against the passage.'] : []), ''];
   for (const [heading, items] of sections) {
     if (!items?.length) continue;
     lines.push(heading);
@@ -29,6 +31,9 @@ export function formatStudyNotes(answer) {
   if (study.caveat) lines.push('', 'Interpretive caution', study.caveat);
   lines.push('', 'Scripture references (consult the passage text in an authorized Bible):');
   for (const source of answer.sources) lines.push('- ' + source.reference + ' — ' + source.role);
-  lines.push('', 'Study explanations are generated or curated notes, not Scripture. Verify interpretations against the cited passages.', 'The Crucible’s Fire · Learn. Teach. Repeat.');
+  lines.push('', referenceOnly
+    ? 'AI generated reading prompts, not Scripture or verified interpretation. Check them against the cited passages.'
+    : 'Study explanations are generated or curated notes, not Scripture. Verify interpretations against the cited passages.',
+    'The Crucible’s Fire · Learn. Teach. Repeat.');
   return lines.join('\n');
 }
