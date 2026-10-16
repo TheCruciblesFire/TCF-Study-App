@@ -93,3 +93,8 @@ No BLB scraping/API proxy; no remote MCP execution; no blanket lexical coverage 
 ### PR #44 — source staging gate (in progress)
 
 [Source-integrity audit and raw-import gate](phase9a-stepbible-source-import.md) verifies downloaded TAGNT/TAHOT source files and SHA-256 evidence before parsing. Raw edition-aware parsing and TBESG/TBESH semantic import remain explicitly pending; do **not** mark Phase 9A as delivered or enable word cards on this basis alone.
+
+
+### PR #46 — Reviewed row-mapping adapter
+
+[Phase 9A reviewed mapping contract](phase9a-reviewed-raw-mapping.md) adds fail-closed exact-header and explicit textual-edition row reconciliation. Actual raw TAGNT/TAHOT headers, variants and extended Strong identifiers remain to be mapped against pinned upstream source files; this does not complete 9A or enable language cards.
