@@ -1,4 +1,5 @@
 import { formatStudyNotes } from './study-export.js';
+import { createInductiveGuide } from './inductive-guide.js';
 const $ = selector => document.querySelector(selector);
 const form = $('#chat-form'), input = $('#question'), sendButton = $('#send-button');
 const conversation = $('#conversation'), welcome = $('#welcome'), status = $('#request-status');
@@ -123,12 +124,20 @@ function renderAnswer(answer, mount, turnId) {
   }
   card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'SCRIPTURE-GROUNDED STUDY'}`), el('h2', '', answer.study.title));
   const sections = [['Passage & context', [answer.study.context]], ['Observe the text', answer.study.observations], ['Understand in context', answer.study.interpretation], ['Theological conclusions', answer.study.theology], ['Christ & the wider story', answer.study.connections], ['Put it into practice', answer.study.application]];
+  const guidedSections = [[], [], []];
   for (const [heading, items] of sections) {
     if (!items.length) continue;
     const section = el('section', 'answer-section'); section.append(el('h3', '', heading));
     for (const item of items) section.append(paragraphWithEvidence(item, answer.sources, turnId));
     card.append(section);
+    const group = heading === 'Observe the text' ? 0 :
+      ['Understand in context', 'Theological conclusions', 'Christ & the wider story'].includes(heading) ? 1 :
+      heading === 'Put it into practice' ? 2 : -1;
+    if (group >= 0) guidedSections[group].push(section);
   }
+  const guide = createInductiveGuide({ sections: guidedSections, reference: answer.sources[0].reference, onStatus: announce });
+  const contextSection = card.querySelector('.answer-section');
+  card.insertBefore(guide, contextSection);
   const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
   const list = el('ul'); for (const question of answer.study.furtherStudy) list.append(el('li', '', question)); further.append(list); card.append(further);
   if (answer.study.caveat) card.append(el('p', 'study-caveat', answer.study.caveat));
