@@ -9,7 +9,7 @@ import { createDemoProviders } from './demo.js';
 import { createLiveProviders, validateStudy, explainSources } from './providers.js';
 import { parseReference } from './references.js';
 import { AppError } from './errors.js';
-import { loadLexicalIndexes, lookupStrong } from './strong-lookup.js';
+import { loadLexicalIndexes, lookupStrong, searchEnglishGloss } from './strong-lookup.js';
 
 export function createApp(config, overrides = {}) {
   const app = express();
@@ -44,6 +44,15 @@ export function createApp(config, overrides = {}) {
     if (req.method === 'POST' && !sameOrigin)
       return next(new AppError(403, 'ORIGIN_REQUIRED', 'This request requires the study assistant’s origin.'));
     next();
+  });
+  app.get('/api/lexicon/search', (req, res, next) => {
+    try {
+      store.rateLimit(req.ip, createHash('sha256').update('lexical:' + req.ip).digest('hex'));
+      const result = searchEnglishGloss(lexicalIndexes, req.query.q);
+      if (result.error === 'INVALID_SEARCH') throw new AppError(400, 'INVALID_SEARCH', 'Enter an English word or short phrase (2–40 letters).');
+      if (result.error === 'LEXICON_UNAVAILABLE') throw new AppError(503, 'LEXICON_UNAVAILABLE', 'Lexical search is currently unavailable.');
+      res.json(result);
+    } catch (error) { next(error); }
   });
   app.get('/api/strong/:id', (req, res, next) => {
     try {
