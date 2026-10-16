@@ -2,6 +2,8 @@
 
 Checks performed on October 15, 2026. No keys, usage tokens, provider response bodies or visitor conversations are included in this report.
 
+This is a historical verification record. See the [October 16 release-readiness record](release-readiness-2026-10-16.md) for subsequent availability checks, completed automated validation, and the remaining production acceptance gates.
+
 | Check | Outcome | Practical limit |
 | --- | --- | --- |
 | OpenAI model access | The configured project key can read the `gpt-4.1-mini` model endpoint (HTTP 200). | Model access alone does not establish generation or billing readiness. |

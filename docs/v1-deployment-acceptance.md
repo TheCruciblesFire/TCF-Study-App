@@ -1,6 +1,8 @@
 # TCF Study App — V1 deployment and acceptance record
 Date: 2026-10-15. Evidence: operator-reported live tests and repository configuration; not an independent production penetration test or full theological audit.
 
+For the subsequent independent read-only availability checks and automated release validation, see the [October 16 release-readiness record](release-readiness-2026-10-16.md). The historical observations below do not replace its outstanding release gates.
+
 ## Running system
 - Repository: https://github.com/TheCruciblesFire/TCF-Study-App
 - Live URL: https://tcf-study-app.onrender.com/

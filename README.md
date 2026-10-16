@@ -2,7 +2,7 @@
 
 A Scripture-centered, embeddable study companion for The Crucible’s Fire. The first workflow covers a passage or basic biblical question, retrieved Scripture, structured study, and follow-up conversation. No visitor account is required.
 
-**Current status:** the live request path and Render deployment configuration are implemented. Real CSB retrieval and the current Scripture reporting client have been checked; full generated-study acceptance remains required once OpenAI API billing is active. Automated tests use fixtures, and ZIP previews remain prepared examples rather than live AI responses.
+**Current status:** the live request path and Render deployment configuration are implemented, and the existing Render app responds in live mode. See the [release-readiness record](docs/release-readiness-2026-10-16.md) for independently checked behavior, automated validation, and outstanding licensing, production-generation, and SnapPages acceptance gates. Earlier operator-reported generation success is recorded in the [V1 acceptance history](docs/v1-deployment-acceptance.md). Automated tests use fixtures, and ZIP previews remain prepared examples rather than live AI responses.
 
 ## Deploy the API version
 
