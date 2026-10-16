@@ -1,0 +1,61 @@
+name: Inspect pinned STEPBible sources
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Full 40-character upstream STEPBible-Data commit SHA"
+        required: true
+        default: "bd09545c7a44b39ace20f16c0359915f2aa23a62"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Inspect actual upstream directory and file names
+        id: inventory
+        continue-on-error: true
+        env:
+          SOURCE_SHA: ${{ inputs.commit }}
+        run: |
+          mkdir -p source-audit
+          node scripts/inspect-stepbible-upstream.js "$SOURCE_SHA" source-audit/upstream-inventory.json
+      - name: Download and audit six pinned text files
+        if: steps.inventory.outcome == 'success'
+        id: stage
+        continue-on-error: true
+        env:
+          SOURCE_SHA: ${{ inputs.commit }}
+        run: |
+          node scripts/fetch-stepbible-sources.js "$SOURCE_SHA" .local-stepbible/"$SOURCE_SHA"
+          node scripts/stepbible-source-audit.js .local-stepbible/"$SOURCE_SHA"/manifest.json source-audit/integrity-report.json
+      - name: Inspect raw tabular structure (no Scripture tokens published)
+        if: steps.stage.outcome == 'success'
+        env:
+          SOURCE_SHA: ${{ inputs.commit }}
+        run: |
+          for f in .local-stepbible/"$SOURCE_SHA"/*.txt; do
+            n=$(basename "$f" .txt | tr -cs 'A-Za-z0-9' '_')
+            node scripts/inspect-stepbible-layout.js "$f" "source-audit/${n}.json"
+          done
+      - name: Upload inspection reports, never raw sources
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stepbible-source-inspection
+          path: source-audit/*.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce successful inventory and acquisition
+        if: steps.inventory.outcome != 'success' || steps.stage.outcome != 'success'
+        run: |
+          echo "Inspect the uploaded inventory and fix any source-file mismatches. Raw field parsing remains blocked."
+          exit 1
