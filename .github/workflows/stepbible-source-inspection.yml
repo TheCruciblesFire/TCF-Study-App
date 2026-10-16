@@ -46,6 +46,20 @@ jobs:
             n=$(basename "$f" .txt | tr -cs 'A-Za-z0-9' '_')
             node scripts/inspect-stepbible-layout.js "$f" "source-audit/${n}.json"
           done
+      - name: Collect reviewed-mapping evidence candidates
+        if: steps.stage.outcome == 'success'
+        env:
+          SOURCE_SHA: ${{ inputs.commit }}
+        run: |
+          for f in .local-stepbible/"$SOURCE_SHA"/*.txt; do
+            n=$(basename "$f" .txt | tr -cs 'A-Za-z0-9' '_')
+            case "$n" in
+              TAGNT*) dataset=TAGNT ;;
+              TAHOT*) dataset=TAHOT ;;
+              *) continue ;;
+            esac
+            node scripts/extract-stepbible-mapping-evidence.js "$f" "$dataset" "source-audit/${n}_mapping-evidence.json"
+          done
       - name: Upload inspection reports, never raw sources
         if: always()
         uses: actions/upload-artifact@v4
