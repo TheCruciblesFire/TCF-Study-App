@@ -5,7 +5,7 @@ export const INDUCTIVE_STAGES = Object.freeze([
   Object.freeze({ title: 'Interpretation', prompt: 'What does the passage mean in its literary context? Which observations support your reading? Note uncertainty rather than assuming a preferred framework.' }),
   Object.freeze({ title: 'Application', prompt: 'In light of what the passage actually teaches, what faithful response may follow? Keep the response specific, gracious, and proportionate.' }),
 ]);
-export function createInductiveGuide({ sections, reference, onStatus = () => {} }) {
+export function createInductiveGuide({ sections, reference, onStatus = () => {}, autoStart = false }) {
   if (!Array.isArray(sections) || sections.length !== 3 || sections.some(group => !Array.isArray(group)))
     throw new TypeError('Expected the three existing study-section groups');
   const el = (tag, cls, text) => {
@@ -69,10 +69,12 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {} 
     actions.append(next);
     working.append(step, prompt, label, field, actions);
   }
-  start.addEventListener('click', () => {
+  const begin = () => {
     start.hidden = true; intro.hidden = true;
     stage = 0; working.hidden = false; reveal(-1); renderStage();
     onStatus('Guided study started. Read the Scripture source before recording your observations.');
-  });
+  };
+  start.addEventListener('click', begin);
+  if (autoStart) begin();
   return root;
 }
