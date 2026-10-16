@@ -31,7 +31,7 @@ export function parseStepSourceRecords(raw,{dataset,sourceCommit,sourceSha256}={
    if(!headerObserved)throw Error('Token before dataset column header at line '+(i+1));
    if(cells.length!==17)throw Error('Unexpected token column count at line '+(i+1));
    const values=Object.create(null);
-   SOURCE_FIELDS[dataset].forEach((field,index)=>{values[field]=cells[index+ (index>=0?0:0)];});
+   SOURCE_FIELDS[dataset].forEach((field,index)=>{values[field]=cells[index];});
    rows.push({dataset,line:i+1,rawReference:first,referenceParts:{
      book:match[1],chapterText:match[2],verseAndPositionText:match[3],readingMarker:match[4]},
      values,extraColumns:cells.slice(SOURCE_FIELDS[dataset].length),
