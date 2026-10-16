@@ -5,7 +5,7 @@ export const INDUCTIVE_STAGES = Object.freeze([
   Object.freeze({ title: 'Interpretation', prompt: 'What does the passage mean in its literary context? Which observations support your reading? Note uncertainty rather than assuming a preferred framework.' }),
   Object.freeze({ title: 'Application', prompt: 'In light of what the passage actually teaches, what faithful response may follow? Keep the response specific, gracious, and proportionate.' }),
 ]);
-export function createInductiveGuide({ sections, reference, onStatus = () => {}, autoStart = false }) {
+export function createInductiveGuide({ sections, reference, onStatus = () => {}, autoStart = false, requestFeedback = null }) {
   if (!Array.isArray(sections) || sections.length !== 3 || sections.some(group => !Array.isArray(group)))
     throw new TypeError('Expected the three existing study-section groups');
   const el = (tag, cls, text) => {
@@ -67,7 +67,33 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {},
       onStatus('Study step updated. Read the supporting study sections to compare your observations.');
     });
     actions.append(next);
-    working.append(step, prompt, label, field, actions);
+    if (stage === 0 && requestFeedback) {
+      const feedbackButton = el('button', 'inductive-guide-back', 'Get observation feedback');
+      feedbackButton.type = 'button';
+      const feedbackArea = el('div', 'inductive-feedback');
+      feedbackArea.setAttribute('aria-live', 'polite');
+      feedbackButton.addEventListener('click', async () => {
+        const entry = field.value.trim();
+        if (entry.length < 10 || entry.length > 1200) { feedbackArea.replaceChildren(el('p', '', 'Write 10–1,200 characters of observations to request feedback.')); return; }
+        notes[0] = entry;
+        feedbackButton.disabled = true; feedbackArea.replaceChildren(el('p', '', 'Reviewing your observations against the passage…'));
+        try {
+          const response = await requestFeedback(reference, entry);
+          if (stage !== 0) return;
+          feedbackArea.replaceChildren(
+            el('h4', '', 'Observation feedback'),
+            el('p', '', response.feedback.encouragement),
+            el('p', '', response.feedback.observation),
+            el('p', '', response.feedback.nextQuestion),
+            el('p', 'source-disclosure', response.note),
+          );
+          if (response.feedback.caution) feedbackArea.append(el('p', 'source-disclosure', response.feedback.caution));
+        } catch (error) { feedbackArea.replaceChildren(el('p', '', error.message)); }
+        finally { feedbackButton.disabled = false; }
+      });
+      actions.append(feedbackButton);
+      working.append(step, prompt, label, field, actions, feedbackArea);
+    } else working.append(step, prompt, label, field, actions);
   }
   const begin = () => {
     start.hidden = true; intro.hidden = true;
