@@ -146,7 +146,8 @@ function renderAnswer(answer, mount, turnId) {
     if (group >= 0) guidedSections[group].push(section);
   }
   const guide = createInductiveGuide({ sections: guidedSections, reference: answer.sources[0].reference, onStatus: announce, autoStart: studyMode === 'guided',
-    requestFeedback: config?.mode === 'live' ? (reference, notes) => request('/api/study/observation-feedback', { reference, notes }) : null });
+    requestFeedback: config?.mode === 'live' ? (reference, notes) => request('/api/study/observation-feedback', { reference, notes }) : null,
+    requestInterpretationFeedback: config?.mode === 'live' ? (reference, notes) => request('/api/study/interpretation-feedback', { reference, notes }) : null });
   const contextSection = card.querySelector('.answer-section');
   card.insertBefore(guide, contextSection);
   const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
