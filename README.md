@@ -122,3 +122,7 @@ The API also accepts browser-confirmed same-origin requests through an HTTPS rev
 ## Live acceptance before public launch
 
 After supplying credentials and publishing/hosting configuration, run an actual John 15:1–8 study, a different passage, a basic biblical question, and a pronoun-only follow-up. Check the selected passage/translation, context, every citation, copyright and translation information, FUMS network reporting, aggregate token usage and estimated price, error handling, and actual SnapPages framing. Verify that your OpenAI and Bible plan allow the intended use. Live-provider receipt and public deployment are not established by the fake-provider tests.
+
+## Approved next roadmap (Phase 9)
+
+Planning only: [Integrated language study and BLB three-mode roadmap](docs/phase9-roadmap.md) and [study mode architecture map](docs/study-mode-architecture-map.md). These describe planned, **not yet implemented**, work to embed verified transliterated Greek/Hebrew key words in initial studies, replace the standalone lexical lookup UI, and add a third **Deep Dive with Blue Letter Bible** gateway. The limited MCP discovery remains deferred and disabled by default.
