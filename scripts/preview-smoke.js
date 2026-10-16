@@ -21,6 +21,7 @@ try {
   await page.screenshot({path:'preview/tcf-study-demo.png',fullPage:true});
   await page.getByRole('button',{name:/EXPLORE A PASSAGE/}).click();
   await page.getByRole('heading',{name:'Abiding in Christ',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Copy study notes'}).count(), 1);
   await page.getByRole('button',{name:'Read source: John 15:1–8',exact:true}).first().click();
   assert.match(await page.locator('.scripture-text').first().textContent(),/I am the true vine/);
   await page.getByRole('button',{name:'How can I apply this today?',exact:true}).click();
