@@ -45,6 +45,7 @@ export function createDiscoveryRouter({ token, origin, rateLimit } = {}) {
   });
   router.post('/', express.json({ limit: '8kb', type: 'application/json' }), (req, res) => {
     const data = req.body;
+    if (data && !Array.isArray(data) && data.jsonrpc === '2.0' && data.method === 'notifications/initialized' && !('id' in data)) return res.sendStatus(202);
     if (!data || Array.isArray(data) || typeof data !== 'object' || data.jsonrpc !== '2.0' ||
         typeof data.method !== 'string' || !('id' in data) ||
         !(typeof data.id === 'string' || typeof data.id === 'number') ||
@@ -68,8 +69,6 @@ export function createDiscoveryRouter({ token, origin, rateLimit } = {}) {
     }
     return res.json(failure(id, -32601, 'Method not found'));
   });
-  // Notifications are permitted after initialization; stateless server keeps no session.
-  router.post('/', (_req, res) => res.sendStatus(400));
   router.get('/', (_req, res) => res.status(405).set('Allow', 'POST').end());
   router.delete('/', (_req, res) => res.status(405).set('Allow', 'POST').end());
   return router;
