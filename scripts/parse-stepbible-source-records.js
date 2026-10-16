@@ -34,7 +34,7 @@ export function parseStepSourceRecords(raw,{dataset,sourceCommit,sourceSha256}={
    SOURCE_FIELDS[dataset].forEach((field,index)=>{values[field]=cells[index];});
    rows.push({dataset,line:i+1,rawReference:first,referenceParts:{
      book:match[1],chapterText:match[2],verseAndPositionText:match[3],readingMarker:match[4]},
-     values,extraColumns:cells.slice(SOURCE_FIELDS[dataset].length),
+     values,rawColumns:cells.slice(),extraColumns:cells.slice(SOURCE_FIELDS[dataset].length),
      reviewStatus:'unverified-source-values'});
  }
  if(!headerObserved)throw Error('No authentic source column heading found');
