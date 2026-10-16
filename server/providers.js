@@ -17,15 +17,19 @@ export function validateRouteSources(route) {
   const main = parseReference(route.main);
   if (!main) throw new AppError(422, 'INVALID_REFERENCE', 'Please provide a valid controlling passage.');
   const selections = [main];
+  const supporting = [];
   for (const reference of route.supporting) {
     const candidate = parseReference(reference);
     if (!candidate) throw new AppError(502, 'ROUTING_ERROR', 'A supporting passage was invalid. Please try again.');
     const overlaps = selections.some(other => other.book === candidate.book && other.chapter === candidate.chapter &&
       (other.start === null || candidate.start === null || (other.start <= candidate.end && candidate.start <= other.end)));
-    if (overlaps) throw new AppError(502, 'ROUTING_ERROR', 'Supporting passages must be distinct from the controlling text. Please try again.');
+    // A redundant supporting reference adds no independent evidence.
+    // Drop it rather than failing an otherwise valid user-requested study.
+    if (overlaps) continue;
     selections.push(candidate);
+    supporting.push(candidate.reference);
   }
-  return route;
+  return { ...route, supporting };
 }
 const evidenceStrength = z.enum(['direct_text', 'contextual_inference', 'theological_synthesis', 'pastoral_application']);
 const item = z.object({ text: z.string().min(1).max(1400), evidence: z.array(z.string()).min(1).max(3), strength: evidenceStrength });
