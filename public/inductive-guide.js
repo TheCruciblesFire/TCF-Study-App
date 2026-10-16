@@ -16,7 +16,7 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {},
   };
   const root = el('section', 'inductive-guide');
   root.setAttribute('aria-label', 'Guided inductive Bible study');
-  const intro = el('p', 'inductive-guide-intro', 'Want to work through the text yourself? Use a guided Observe → Interpret → Apply sequence. Your responses stay in this browser tab and are not sent to the server.');
+  const intro = el('p', 'inductive-guide-intro', 'Want to work through the text yourself? Use a guided Observe → Interpret → Apply sequence. Your notes stay in this browser tab unless you choose Get observation feedback. That action sends your Observation notes for AI review; the notes are not saved to your study history.');
   const start = el('button', 'inductive-guide-start', 'Start guided study');
   start.type = 'button';
   root.append(el('h3', '', 'Study the passage step by step'), intro, start);
