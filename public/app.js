@@ -209,6 +209,13 @@ async function submitMessage(message) {
     retry.addEventListener('click', () => { if (!busy) { turn.remove(); submitMessage(message); } }); turn.append(retry);
   } finally { setBusy(false); input.focus({ preventScroll: true }); }
 }
+// Omit an unused custom-range query parameter; BLB treats absent and empty differently.
+const blbRange = $('#tcf-blb-range');
+const blbForm = document.querySelector('.tcf-blb-form');
+function syncBlbRange() { blbRange.disabled = !blbRange.value.trim(); }
+blbRange.addEventListener('input', syncBlbRange);
+blbForm.addEventListener('submit', syncBlbRange);
+syncBlbRange();
 document.querySelectorAll('[data-study-mode]').forEach(button => button.addEventListener('click', () => setStudyMode(button.dataset.studyMode)));
 setStudyMode('explore');
 form.addEventListener('submit', event => { event.preventDefault(); submitMessage(input.value.trim()); });
