@@ -41,3 +41,31 @@ export function lookupStrong(databases, input) {
     attribution: db.metadata.attribution, source: record.source, license: record.license,
     note: 'A lexical gloss is not a translation of a particular verse or a complete meaning in context.' };
 }
+
+/**
+ * English gloss discovery, NOT a reverse Bible translation alignment.
+ * Exact whole-word matches only; bounded and sorted for predictable results.
+ */
+export function searchEnglishGloss(databases, input, { limit = 20 } = {}) {
+  const query = typeof input === 'string' ? input.trim().toLowerCase() : '';
+  if (!/^[a-z][a-z -]{1,39}$/.test(query) || query.includes('  ')) return { error: 'INVALID_SEARCH' };
+  if (!databases) return { error: 'LEXICON_UNAVAILABLE' };
+  const matches = [];
+  let total = 0;
+  const words = query.split(/[ -]+/);
+  for (const lang of ['G', 'H']) {
+    for (const entry of Object.values(databases[lang]?.entries ?? {})) {
+      const gloss = entry.gloss.toLowerCase();
+      const tokens = gloss.match(/[a-z]+/g) ?? [];
+      if (!words.every(word => tokens.includes(word))) continue;
+      total++;
+      if (matches.length < 100) matches.push({ id: entry.id, lemma: entry.lemma, gloss: entry.gloss,
+        language: lang === 'G' ? 'Greek' : 'Hebrew' });
+    }
+  }
+  matches.sort((a,b) => a.gloss.length - b.gloss.length ||
+    a.id.localeCompare(b.id, 'en', { numeric: true }));
+  return { query, matches: matches.slice(0, Math.max(1, Math.min(limit, 20))), total,
+    capped: total > 100, attribution: 'STEP Bible', license: 'CC BY 4.0',
+    note: 'Matches are based on English words in STEPBible glosses. They do not identify which original-language word appears in a particular Bible verse.' };
+}
