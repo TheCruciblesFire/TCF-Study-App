@@ -12,6 +12,7 @@ ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 DATA_DIR=/app/.data LEXICON_DIR=/
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && mkdir /app/.data && chown node:node /app/.data
 COPY --chown=node:node server ./server
+COPY --chown=node:node packages/kv-study-engine ./packages/kv-study-engine
 COPY --chown=node:node public ./public
 COPY --chown=node:node scripts/usage.js scripts/smoke.js ./scripts/
 COPY --from=lexicon-build --chown=node:node /build/lexicon /app/lexicon
