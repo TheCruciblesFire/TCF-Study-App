@@ -13,6 +13,7 @@ import { createLiveProviders, validateStudy, explainSources } from './providers.
 import { parseReference } from './references.js';
 import { AppError } from './errors.js';
 import { loadLexicalIndexes, lookupStrong, searchEnglishGloss } from './strong-lookup.js';
+import { buildLexicalStudyPacket } from './lexical-study-packet.js';
 
 export function createApp(config, overrides = {}) {
   const app = express();
@@ -198,6 +199,12 @@ export function createApp(config, overrides = {}) {
             message: 'I can help with a passage study or a basic biblical question. Full topical surveys, original-language research, commentary searches, and deep dives are not available in this version. Try a specific passage or a narrower question.' }
         : { mode: config.APP_MODE, kind: route.kind, sources: explainSources(study, sources), study,
             ...(route.key ? { demoKey: route.key } : {}) };
+      // Optional reviewed research packet. Never infer a word occurrence from a dictionary alone.
+      // Until a separately reviewed tagged index and approvals are supplied, returns no lexical assertions.
+      if (result.workflow.supported && overrides.reviewedVerseIndex && overrides.verseApprovals && lexicalIndexes) {
+        answer.lexicalPacket = buildLexicalStudyPacket(route.main, overrides.reviewedVerseIndex,
+          overrides.verseApprovals, lexicalIndexes);
+      }
       // Analytics tokens belong only in the immediate response, never stored in history.
       const retained = structuredClone(answer);
       for (const source of retained.sources) delete source.fumsToken;
