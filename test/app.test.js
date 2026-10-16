@@ -331,7 +331,7 @@ test('selection rationales only claim connections substantiated by study evidenc
   const reasoned = explainSources(study, sources);
   assert.match(reasoned[0].selectionReason, /Controlling passage/);
   assert.match(reasoned[1].selectionReason, /listed for the reader to compare/);
-  assert.match(reasoned[2].selectionReason, /cross-reference section/);
+  assert.match(reasoned[2].selectionReason, /listed for the reader to compare/);
   assert.match(reasoned[3].selectionReason, /preceding verses/);
   const withoutConnection = structuredClone(study);
   withoutConnection.connections = [];
