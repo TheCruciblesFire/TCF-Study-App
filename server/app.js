@@ -9,10 +9,12 @@ import { createDemoProviders } from './demo.js';
 import { createLiveProviders, validateStudy, explainSources } from './providers.js';
 import { parseReference } from './references.js';
 import { AppError } from './errors.js';
+import { loadLexicalIndexes, lookupStrong } from './strong-lookup.js';
 
 export function createApp(config, overrides = {}) {
   const app = express();
   const store = overrides.store || createStore(config);
+  const lexicalIndexes = overrides.lexicalIndexes ?? loadLexicalIndexes(config.LEXICON_DIR);
   const providers = overrides.providers || (config.APP_MODE === 'demo' ? createDemoProviders() : createLiveProviders(config));
   app.disable('x-powered-by');
   app.set('trust proxy', config.TRUST_PROXY_HOPS);
@@ -43,11 +45,21 @@ export function createApp(config, overrides = {}) {
       return next(new AppError(403, 'ORIGIN_REQUIRED', 'This request requires the study assistant’s origin.'));
     next();
   });
+  app.get('/api/strong/:id', (req, res, next) => {
+    try {
+      store.rateLimit(req.ip, createHash('sha256').update('lexical:' + req.ip).digest('hex'));
+      const result = lookupStrong(lexicalIndexes, req.params.id);
+      if (result.error === 'INVALID_STRONG') throw new AppError(400, 'INVALID_STRONG', 'Enter a traditional Strong number such as G26 or H7225.');
+      if (result.error === 'LEXICON_UNAVAILABLE') throw new AppError(503, 'LEXICON_UNAVAILABLE', 'The reviewed lexical indexes have not been deployed yet.');
+      res.json(result);
+    } catch (error) { next(error); }
+  });
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', mode: config.APP_MODE }));
   app.get('/api/config', (req, res) => {
     store.rateLimit(req.ip, createHash('sha256').update(`bootstrap:${req.ip}`).digest('hex'));
     const session = store.session();
     res.json({ mode: config.APP_MODE, sessionToken: session.raw, maxMessageLength: 1500,
+      lexicalLookupEnabled: Boolean(lexicalIndexes),
       methodology: 'KV Study Engine 3.0.1 · passage-study adaptation',
       examples: ['Study John 15:1–8', 'Walk through Psalm 23', 'What is grace?'] });
   });

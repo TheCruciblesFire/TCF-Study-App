@@ -31,6 +31,7 @@ async function connect() {
     const nextConfig = await request('/api/config');
     if (nextConfig.mode === 'live') await loadBibleReporting();
     config = nextConfig;
+    $('#lexical-tool').hidden = !config.lexicalLookupEnabled;
     const notice = $('#mode-notice');
     notice.textContent = config.preview ? 'OFFLINE DEMO · Three curated studies. Everything stays in this page. No server or live AI.' : config.mode === 'demo' ? 'DEMO EXPERIENCE · Three curated studies. No live AI or Bible API calls. Try an example below.' : 'LIVE STUDY · Responses use retrieved Scripture and AI. Read the sources and verify the explanation.';
     notice.classList.toggle('live', config.mode === 'live');
@@ -182,6 +183,28 @@ document.querySelectorAll('[data-new-study]').forEach(button => button.addEventL
   } catch (error) { announce(error.message, true); }
   finally { setBusy(false); input.focus({ preventScroll: true }); }
 }));
+const lexicalForm = $('#strong-form');
+lexicalForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const id = $('#strong-id').value.trim();
+  const output = $('#strong-output');
+  output.replaceChildren(el('p', '', 'Checking the verified lexical index…'));
+  try {
+    const result = await request('/api/strong/' + encodeURIComponent(id));
+    output.replaceChildren();
+    if (!result.available) { output.append(el('p', '', result.message)); return; }
+    output.append(el('h3', '', result.id + ' · ' + result.lemma),
+      el('p', '', 'Lexical gloss: ' + result.gloss),
+      el('p', 'source-disclosure', result.note),
+      el('p', 'source-disclosure', result.attribution + ' · License: ' + result.license));
+    const source = new URL(result.source);
+    if (source.protocol === 'https:' && source.hostname === 'github.com' &&
+        source.pathname.startsWith('/STEPBible/STEPBible-Data/')) {
+      const link = el('a', 'source-link', 'Review original STEPBible source ↗');
+      link.href = source.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; output.append(link);
+    }
+  } catch (error) { output.replaceChildren(el('p', 'answer-message', error.message)); }
+});
 const dialog = $('#info-dialog');
 function openInfo(title, paragraphs) {
   $('#dialog-title').textContent = title;
