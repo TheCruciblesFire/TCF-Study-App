@@ -1,5 +1,6 @@
 import { selectSupportingSources } from './relevance.js';
 import { chooseContextReference } from './context.js';
+import { preserveFollowupPassage } from './continuity.js';
 import express from 'express';
 import { randomUUID, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -91,7 +92,8 @@ export function createApp(config, overrides = {}) {
       if (!body.success) throw new AppError(400, 'INVALID_MESSAGE', 'Enter a biblical question or passage, using 1–1,500 characters.');
       store.begin(req.studySession.id); began = true;
       if (config.APP_MODE === 'live') reservation = store.reserve();
-      const route = await providers.route(body.data.message, req.studySession.history, meter);
+      const proposedRoute = await providers.route(body.data.message, req.studySession.history, meter);
+      const route = preserveFollowupPassage(proposedRoute, body.data.message, req.studySession.history);
       let answer;
       if (route.kind === 'unsupported') {
         answer = { mode: config.APP_MODE, kind: route.kind, sources: [], study: null,
