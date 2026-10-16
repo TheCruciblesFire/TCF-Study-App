@@ -27,4 +27,7 @@ test('copy notes preserves study movements and cited references without licensed
   assert.throws(() => formatStudyNotes({ study: {}, sources: [] }), /completed study/);
   const liveNotes = formatStudyNotes({ ...answer, grounding: 'reference_only' });
   assert.match(liveNotes, /AI received references and the question, not the Scripture text/);
+  assert.match(liveNotes, /Interpretive questions/);
+  assert.match(liveNotes, /Read the passage in context/);
+  assert.doesNotMatch(liveNotes, /Passage & context/);
 });
