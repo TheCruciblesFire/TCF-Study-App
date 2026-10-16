@@ -253,13 +253,14 @@ test('citation regression: chapter labels accepted, out-of-range verses and URLs
 });
 
 
-test('Phase 2: supporting references must be distinct and non-overlapping', () => {
+test('Phase 2: overlapping supporting references are excluded, preserving distinct ones', () => {
   const route = supporting => ({ kind: 'passage', question: 'Study the text', main: 'John 15:1–8', supporting });
   assert.deepEqual(validateRouteSources(route(['John 14:21', 'Galatians 5:22–23'])).supporting, ['John 14:21', 'Galatians 5:22–23']);
   for (const supporting of [
     ['John 15:1–8'], ['John 15:5'], ['John 15'],
-    ['Romans 8:38–39', 'Romans 8:39'], ['John 14:21', 'John 14:21'],
-  ]) assert.throws(() => validateRouteSources(route(supporting)), /Supporting passages must be distinct/);
+  ]) assert.deepEqual(validateRouteSources(route(supporting)).supporting, []);
+  assert.deepEqual(validateRouteSources(route(['Romans 8:38–39', 'Romans 8:39'])).supporting, ['Romans 8:38–39']);
+  assert.deepEqual(validateRouteSources(route(['John 14:21', 'John 14:21'])).supporting, ['John 14:21']);
   assert.throws(() => validateRouteSources(route(['John 0:1'])), /supporting passage was invalid/);
   assert.deepEqual(validateRouteSources(route(['John 15:9–12'])).supporting, ['John 15:9–12']);
 });
@@ -300,4 +301,16 @@ test('selection rationales only claim connections substantiated by study evidenc
   withoutConnection.connections = [];
   assert.match(explainSources(withoutConnection, sources)[1].selectionReason, /does not establish/);
   assert.equal(sources[1].selectionReason, undefined);
+});
+
+test('overlapping supporting references are omitted instead of rejecting 2 Timothy 3:15', () => {
+ const route = validateRouteSources({ kind:'passage', question:'Study 2 Timothy 3:15',
+  main:'2 Timothy 3:15', supporting:['2 Timothy 3:14–17','Psalm 119:105'] });
+ assert.equal(route.main,'2 Timothy 3:15');
+ assert.deepEqual(route.supporting,['Psalms 119:105']);
+ const duplicate = validateRouteSources({ kind:'passage', question:'Study 2 Timothy 3:15',
+  main:'2 Timothy 3:15', supporting:['2 Timothy 3:15','2 Timothy 3:14–16'] });
+ assert.deepEqual(duplicate.supporting,[]);
+ assert.throws(() => validateRouteSources({ kind:'passage', main:'2 Timothy 3:15',
+  supporting:['not a Bible passage'] }), /invalid/i);
 });
