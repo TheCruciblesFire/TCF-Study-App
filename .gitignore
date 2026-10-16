@@ -7,3 +7,6 @@ test-results/
 playwright-report/
 *.log
 preview/
+
+# Locally staged STEPBible source snapshots and audit reports
+.local-stepbible/
