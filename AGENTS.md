@@ -121,3 +121,5 @@ Before Phase 9 work, read:
 - `docs/phase9-consolidated-delivery-and-exit.md`
 
 When those documents conflict with observed implementation state, report the discrepancy rather than silently choosing one.
+
+For a machine or session handoff, also read `docs/machine-handoff.md`. Recheck its dated state against current `origin/main`; local generated evidence and integrations may need to be recreated.
