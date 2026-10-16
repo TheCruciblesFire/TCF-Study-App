@@ -222,3 +222,9 @@ dialog .eyebrow { font-size: 12px; color: var(--gold-light); }
 .lexical-result-link { padding: 0; border: 0; background: transparent; color: var(--gold-light); font-size: 16px; text-align: left; overflow-wrap: anywhere; }
 .lexical-result-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .lexical-result-link:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 4px; }
+
+/* Study export action matches existing TCF dark and gold controls. */
+.study-actions { margin: 25px 0 8px; padding: 16px 0 12px; border-top: 1px solid var(--line); }
+.study-copy-button { font-family: var(--label); font-size: 14px; font-weight: 500; letter-spacing: .7px; padding: 11px 17px; color: #000; background: var(--gold); border: 1px solid var(--gold); border-radius: 4px; }
+.study-copy-button:hover { background: var(--gold-light); }
+.study-copy-caption { margin: 10px 0 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
