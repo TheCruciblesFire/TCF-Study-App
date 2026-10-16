@@ -27,3 +27,12 @@ test('BLB mode hides composer/starters; existing modes and new-study reset remai
 });
 
 test('BLB site fallback is voluntary and never refreshes external pages',()=>{assert.match(html,/open Blue Letter Bible directly/);assert.match(html,/class="blb-fallback-note"/);assert.doesNotMatch(js,/location\.reload\(/);});
+
+test('BLB search uses an explicit user-triggered navigation with stable params',()=>{
+ assert.match(js,/blbForm\.addEventListener\('submit', event => \{/);
+ assert.match(js,/event\.preventDefault\(\)/);
+ assert.match(js,/url\.searchParams\.set\('Criteria', criteria\)/);
+ assert.match(js,/url\.searchParams\.set\('t',/);
+ assert.match(js,/if \(!blbRange\.disabled\) url\.searchParams\.set\('cscs',/);
+ assert.match(js,/window\.open\(url\.href, '_blank', 'noopener,noreferrer'\)/);
+});
