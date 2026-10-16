@@ -1,0 +1,30 @@
+{
+  "enginePackageVersion": "0.1.0",
+  "baseline": {
+    "plugin": "KV Study Plugin",
+    "version": "3.0.1",
+    "repository": "https://github.com/TheCruciblesFire/kv-study-plugin",
+    "commit": "709d036e3d5a36d03824f9bbb3021ac5b1bc2f92",
+    "source": "docs/kv-methodology.md"
+  },
+  "review": {
+    "status": "adaptation-only",
+    "currentInstalledSkillInspected": true,
+    "fullUpstreamSnapshotParityVerified": false,
+    "publicUsePermissionsConfirmed": false
+  },
+  "enabledModes": [
+    "passage",
+    "question"
+  ],
+  "notImplemented": [
+    "inductive-guidance",
+    "topical-research",
+    "external-background",
+    "contextual-original-language",
+    "formal-faithfulness-audit",
+    "formal-source-audit",
+    "mcp"
+  ],
+  "deployment": "Existing server-only, no additional endpoints"
+}
