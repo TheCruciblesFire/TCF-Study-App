@@ -39,6 +39,7 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {} 
         catch { onStatus('Copy was blocked by your browser. Select and copy your notes from the fields before finishing.'); }
       });
       working.append(copy);
+      working.append(el('pre', 'inductive-guide-notes', INDUCTIVE_STAGES.map((item,i) => item.title + '\\n' + (notes[i] || '(No notes recorded)')).join('\\n\\n')));
       return;
     }
     const current = INDUCTIVE_STAGES[stage];
