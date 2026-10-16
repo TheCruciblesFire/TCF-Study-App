@@ -130,7 +130,43 @@ test('live provider contract: route, authorized retrieval, generation, attributi
   assert.ok(store.summary()[0].estimated_usd > 0);
   const generation = JSON.parse(calls.at(-1).options.body);
   assert.match(generation.messages[0].content, /KV Study Engine/);
-  assert.match(generation.messages[1].content, /I am the true vine/);
+  assert.doesNotMatch(generation.messages[1].content, /I am the true vine/);
+  assert.deepEqual(JSON.parse(generation.messages[1].content).sources.map(source => Object.keys(source)), [['id', 'reference'], ['id', 'reference'], ['id', 'reference']]);
+  assert.equal(answer.grounding, 'reference_only');
+  assert.equal(answer.study.observations[0].strength, 'reading_prompt');
+  assert.match(answer.study.caveat, /did not inspect/);
+});
+
+test('follow-up routing sends prior questions and references without study prose or passage text', async () => {
+  const calls = [];
+  const providers = createLiveProviders(loadConfig(liveEnv), async (_url, options) => {
+    calls.push(JSON.parse(options.body));
+    return Response.json({ usage: { prompt_tokens: 20, completion_tokens: 20 },
+      choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({
+        kind: 'passage', question: 'Study John 15:1–8', main: 'John 15:1–8', supporting: [],
+      }) } }] });
+  });
+  const history = [{ question: 'Study John 15:1–8', answer: {
+    sources: [{ reference: 'John 15:1–8', text: 'LICENSED_TEXT_SENTINEL' }],
+    study: { context: { text: 'PRIVATE_STUDY_SENTINEL' } },
+  } }];
+  await providers.route('Explain the main idea', history, { cost: 0, input: 0, output: 0 });
+  assert.equal(calls.length, 1);
+  const sent = JSON.stringify(calls[0].messages);
+  assert.doesNotMatch(sent, /LICENSED_TEXT_SENTINEL|PRIVATE_STUDY_SENTINEL/);
+  assert.deepEqual(JSON.parse(calls[0].messages[1].content).history,
+    [{ question: 'Study John 15:1–8', main: 'John 15:1–8' }]);
+});
+
+test('live Guided Study feedback is unavailable without text-aware authorization', async t => {
+  const { post } = await fixture(t, liveEnv, { providers: createDemoProviders() });
+  assert.equal((await post('John 15:1–8')).status, 200);
+  for (const stage of ['observation', 'interpretation', 'application']) {
+    const response = await post(null, { reference: 'John 15:1–8', notes: 'A careful study reflection' },
+      `/api/study/${stage}-feedback`);
+    assert.equal(response.status, 422);
+    assert.equal((await response.json()).error.code, 'FEEDBACK_UNAVAILABLE');
+  }
 });
 
 test('unretrieved citations fail closed rather than returning a plausible-looking study', async t => {
