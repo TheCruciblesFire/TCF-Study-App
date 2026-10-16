@@ -44,8 +44,71 @@
             <div class="study-mode-options">
               <button type="button" class="study-mode-option" data-study-mode="explore" aria-pressed="true"><strong>Ask &amp; Explore</strong><span>Ask a question or explore a passage</span></button>
               <button type="button" class="study-mode-option" data-study-mode="guided" aria-pressed="false"><strong>Guided Study</strong><span>Observe · Interpret · Apply</span></button>
+              <button type="button" class="study-mode-option" data-study-mode="blb" aria-pressed="false"><strong>Deep Dive with Blue Letter Bible</strong><span>Search Scripture and lexical resources on BLB</span></button>
             </div>
             <p id="study-mode-description" class="study-mode-description">Ask a biblical question or enter a passage below.</p>
+          </div>
+          <div id="blb-gateway" hidden>
+<section class="tcf-blb-widget" aria-labelledby="tcf-blb-heading">
+<div class="tcf-blb-inner">
+<p class="tcf-blb-eyebrow">The Crucible's Fire Study Tools</p>
+<h2 class="tcf-blb-heading" id="tcf-blb-heading">Search Blue Letter Bible</h2>
+<p class="tcf-blb-intro">Search Scripture, phrases, topics, or Strong's numbers. Results and study resources open directly on Blue Letter Bible.</p>
+<form class="tcf-blb-form" action="https://www.blueletterbible.org/search/preSearch.cfm" method="get" target="_blank" rel="noopener noreferrer">
+<div class="tcf-blb-search-row">
+<div><label class="tcf-blb-label" for="tcf-blb-criteria">Search</label> <input class="tcf-blb-input" id="tcf-blb-criteria" name="Criteria" type="search" required="" maxlength="200" autocomplete="off" placeholder="Try John 3:16, grace, or G26"></div>
+<div><label class="tcf-blb-label" for="tcf-blb-translation">Translation</label> <select class="tcf-blb-select" id="tcf-blb-translation" name="t" aria-label="Bible translation">
+<option value="KJV">King James Version (KJV)</option>
+<option value="NKJV">New King James Version (NKJV)</option>
+<option value="NLT">New Living Translation (NLT)</option>
+<option value="NIV">New International Version (NIV)</option>
+<option value="ESV">English Standard Version (ESV)</option>
+<option value="CSB" selected>Christian Standard Bible (CSB)</option>
+<option value="NASB20">New American Standard Bible 2020 (NASB20)</option>
+<option value="NASB95">New American Standard Bible 1995 (NASB95)</option>
+<option value="LSB">Legacy Standard Bible (LSB)</option>
+<option value="AMP">Amplified Bible (AMP)</option>
+<option value="NET">New English Translation (NET)</option>
+<option value="RSV">Revised Standard Version (RSV)</option>
+<option value="ASV">American Standard Version (ASV)</option>
+<option value="YLT">Young's Literal Translation (YLT)</option>
+<option value="DBY">Darby Bible (DBY)</option>
+<option value="WEB">World English Bible (WEB)</option>
+<option value="HNV">Hebrew Names Version (HNV)</option>
+<option value="VUL">Latin Vulgate (VUL)</option>
+<option value="NAV">Nova Vulgata (NAV)</option>
+<option value="WLC">Westminster Leningrad Codex (WLC)</option>
+<option value="LXX">Septuagint (LXX)</option>
+<option value="mGNT">Morphological Greek New Testament (mGNT)</option>
+<option value="TR">Textus Receptus (TR)</option>
+<option value="SVD">Smith-Van Dyke Arabic Bible (SVD)</option>
+<option value="BES">Spanish Bible (BES)</option>
+<option value="RVR09">Reina-Valera 1909 (RVR09)</option>
+<option value="RVR60">Reina-Valera 1960 (RVR60)</option>
+<option value="BBE">Bible in Basic English (BBE)</option>
+<option value="CHT">Chinese Union Traditional (CHT)</option>
+<option value="EM">Esperanto Bible (EM)</option>
+<option value="KOR">Korean Bible (KOR)</option>
+<option value="LS">Louis Segond (LS)</option>
+<option value="LUT">Luther Bible (LUT)</option>
+<option value="RST">Russian Synodal Translation (RST)</option>
+<option value="SE">Swedish Bible (SE)</option>
+</select></div>
+<button class="tcf-blb-submit" type="submit">Search BLB</button></div>
+<div class="tcf-blb-examples" aria-label="Search examples"><span class="tcf-blb-examples-label">Try:</span> <a class="tcf-blb-example" href="https://www.blueletterbible.org/search/preSearch.cfm?Criteria=John%203%3A16&amp;t=CSB" target="_blank" rel="noopener noreferrer">John 3:16</a> <a class="tcf-blb-example" href="https://www.blueletterbible.org/search/preSearch.cfm?Criteria=kingdom%20of%20God&amp;t=CSB" target="_blank" rel="noopener noreferrer">kingdom of God</a> <a class="tcf-blb-example" href="https://www.blueletterbible.org/search/preSearch.cfm?Criteria=G26&amp;t=CSB" target="_blank" rel="noopener noreferrer">Strong's G26</a> <a class="tcf-blb-example" href="https://www.blueletterbible.org/search/preSearch.cfm?Criteria=faith%20grace&amp;t=CSB" target="_blank" rel="noopener noreferrer">faith + grace</a></div>
+<details class="tcf-blb-details">
+<summary class="tcf-blb-summary">Limit to a custom Bible range</summary>
+<div class="tcf-blb-range-field"><label class="tcf-blb-label" for="tcf-blb-range">Custom range (optional)</label> <input class="tcf-blb-input" id="tcf-blb-range" name="cscs" maxlength="200" autocomplete="off" placeholder="Example: Psa-Mal;Rom 3-12;Mat 5:12-22">
+<p class="tcf-blb-hint">Separate multiple ranges with semicolons. Leave blank to search the full Bible.</p>
+</div>
+</details>
+</form>
+<footer class="tcf-blb-footer">
+<p>Search results open in a new tab. Scripture and study resources are provided by <a class="tcf-blb-link" href="https://www.blueletterbible.org/" target="_blank" rel="noopener noreferrer">Blue Letter Bible</a>.</p>
+<p>Study with clarity. Live with conviction.</p>
+</footer>
+</div>
+</section>
           </div>
           <div class="starter-heading"><span></span> BEGIN WITH A QUESTION <span></span></div>
           <div class="starter-grid">
@@ -54,12 +117,6 @@
             <button class="starter" type="button" data-question="What is grace?"><span class="starter-icon" aria-hidden="true">03</span><span class="starter-type">ASK A BIBLE QUESTION</span><strong>What is grace?</strong><span class="starter-description">Start with the foundation.</span><span class="starter-arrow" aria-hidden="true"></span></button>
           </div>
           <p class="welcome-caption">No account needed. Just an open Bible and a willing heart.</p>
-        </section>
-        <section id="lexical-tool" class="lexical-tool" aria-labelledby="lexical-title" hidden>
-          <h2 id="lexical-title">Original-language word lookup</h2>
-          <p>Search by English word or Strong’s number. English matches are lexical possibilities, not verse-specific word identifications.</p>
-          <form id="strong-form"><label for="strong-id">English word or Strong’s number</label> <input id="strong-id" name="id" maxlength="40" placeholder="love, grace, G26, H10" required> <button type="submit">Look up</button></form>
-          <div id="strong-output" role="status" aria-live="polite"></div>
         </section>
         <section class="conversation" id="conversation" aria-label="Your conversation" hidden></section>
       </div>
