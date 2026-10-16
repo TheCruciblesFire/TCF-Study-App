@@ -25,6 +25,7 @@ jobs:
         continue-on-error: true
         env:
           SOURCE_SHA: ${{ inputs.commit }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p source-audit
           node scripts/inspect-stepbible-upstream.js "$SOURCE_SHA" source-audit/upstream-inventory.json
