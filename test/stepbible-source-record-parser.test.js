@@ -22,7 +22,7 @@ test('Hebrew original content and ketiv/qere-like markers remain uninterpreted',
 });
 test('fails closed on missing headers, wrong widths, unpinned inputs or invalid dataset',()=>{
  assert.throws(()=>parseStepSourceRecords(row('Mat.1.001=NKO',['a']),options('TAGNT')), /before dataset column header/);
- assert.throws(()=>parseStepSourceRecords(row('Word & Type',['a'])+'\n'+row('Mat.1.001=NKO'),options('TAGNT')), /column-heading width/);
+ assert.throws(()=>parseStepSourceRecords('Word & Type\ta'+'\n'+row('Mat.1.001=NKO'),options('TAGNT')), /column-heading width/);
  assert.throws(()=>parseStepSourceRecords('',options('TAGNT')), /heading/);
  assert.throws(()=>parseStepSourceRecords('',{...options('TAGNT'),sourceCommit:'master'}), /Pinned/);
  assert.throws(()=>parseStepSourceRecords('',options('X')), /Dataset/);
