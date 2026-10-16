@@ -1,3 +1,4 @@
+import { formatStudyNotes } from './study-export.js';
 const $ = selector => document.querySelector(selector);
 const form = $('#chat-form'), input = $('#question'), sendButton = $('#send-button');
 const conversation = $('#conversation'), welcome = $('#welcome'), status = $('#request-status');
@@ -141,6 +142,20 @@ function renderAnswer(answer, mount, turnId) {
     attribution.append(link); sources.append(attribution);
   }
   card.append(sources);
+  const tools = el('div', 'study-actions');
+  const copy = el('button', 'study-copy-button', 'Copy study notes');
+  copy.type = 'button';
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(formatStudyNotes(answer));
+      copy.textContent = 'Notes copied';
+      announce('Study notes copied without licensed Scripture text.');
+    } catch {
+      announce('Copy was blocked by your browser. You can still review the study on this page.', true);
+    }
+  });
+  tools.append(copy, el('p', 'study-copy-caption', 'Copies the outline and Scripture references, not the full Bible passage.'));
+  card.append(tools);
   const followups = el('div', 'followup-chips');
   for (const text of ['How can I apply this today?', 'Explain the main idea']) {
     const button = el('button', '', text); button.type = 'button'; button.addEventListener('click', () => submitMessage(text)); followups.append(button);
