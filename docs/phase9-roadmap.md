@@ -1,6 +1,6 @@
 # Phase 9 — Integrated Language Study and Three-Path Study Experience
 
-**Status:** Approved development roadmap, not implemented. **Scope:** TCF Bible Study Assistant, after PR #40. **MCP:** Deferred; no MCP work in Phase 9.
+**Status:** Phase 9A foundation in progress; see [incremental 9A implementation](phase9a-lexical-foundation.md). Production verse-linked datasets and initial-response integration are not implemented. **Scope:** TCF Bible Study Assistant, after PR #40. **MCP:** Deferred; no MCP work in Phase 9.
 
 ## Product decision
 
