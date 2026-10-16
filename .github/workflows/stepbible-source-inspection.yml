@@ -67,6 +67,12 @@ jobs:
           SOURCE_SHA: ${{ inputs.commit }}
         run: |
           node scripts/collect-stepbible-fixture-candidates.js .local-stepbible/"$SOURCE_SHA"/manifest.json source-audit/fixture-review-candidates.json
+      - name: Validate pinned authentic candidate shapes
+        if: steps.stage.outcome == 'success'
+        env:
+          SOURCE_SHA: ${{ inputs.commit }}
+        run: |
+          node scripts/validate-stepbible-authentic-candidates.js source-audit/fixture-review-candidates.json "$SOURCE_SHA" source-audit/authentic-shape-validation.json
       - name: Upload inspection reports, never raw sources
         if: always()
         uses: actions/upload-artifact@v4
