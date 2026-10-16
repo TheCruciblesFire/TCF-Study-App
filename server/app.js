@@ -135,6 +135,29 @@ export function createApp(config, overrides = {}) {
       next(error);
     } finally { if (began) store.end(req.studySession.id); }
   });
+  app.post('/api/study/application-feedback', sessionMiddleware, async (req, res, next) => {
+    let began = false, reservation;
+    const meter = { cost: 0, input: 0, output: 0 };
+    try {
+      store.rateLimit(req.ip, req.studySession.id);
+      const body = z.object({ reference: z.string().min(2).max(80), notes: z.string().trim().min(10).max(1200) }).strict().safeParse(req.body);
+      if (!body.success) throw new AppError(400, 'INVALID_APPLICATION', 'Write 10–1,200 characters of application notes.');
+      const latest = [...req.studySession.history].reverse().find(turn => turn.answer?.study && turn.answer?.sources?.[0]);
+      const controlling = latest?.answer?.sources?.[0];
+      if (!controlling || controlling.reference !== body.data.reference)
+        throw new AppError(409, 'STUDY_CONTEXT', 'Start a passage study before requesting feedback on your application.');
+      if (config.APP_MODE !== 'live' || typeof providers.applicationFeedback !== 'function')
+        throw new AppError(422, 'FEEDBACK_UNAVAILABLE', 'Application feedback requires live study mode.');
+      store.begin(req.studySession.id); began = true;
+      reservation = store.reserve();
+      const feedback = await providers.applicationFeedback(controlling.reference, controlling.text, body.data.notes, meter);
+      if (reservation) { store.settle(reservation, meter, false); reservation = undefined; }
+      res.json({ feedback, reference: controlling.reference, note: 'AI guidance, not a formal passage-faithfulness audit or personal directive.' });
+    } catch (error) {
+      if (reservation) store.settle(reservation, meter, true);
+      next(error);
+    } finally { if (began) store.end(req.studySession.id); }
+  });
   app.post('/api/chat', sessionMiddleware, async (req, res, next) => {
     let began = false, reservation;
     const meter = { cost: 0, input: 0, output: 0 };
