@@ -498,3 +498,6 @@ transition: none !important;
 #blb-gateway[hidden], .composer-wrap[hidden], .starter-heading[hidden], .starter-grid[hidden], .welcome-caption[hidden] { display: none !important; }
 .study-mode-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 760px) { .study-mode-options { grid-template-columns: 1fr; } }
+
+.blb-fallback-note { color: #d3d0bc; font-size: 13px; line-height: 1.6; margin: 14px 0 4px; }
+.blb-fallback-note a { color: var(--gold-light); text-underline-offset: 3px; }
