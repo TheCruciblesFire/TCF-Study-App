@@ -88,3 +88,8 @@ No BLB scraping/API proxy; no remote MCP execution; no blanket lexical coverage 
 
 - Prior roadmap: 9A lexical alignment → 9B study enrichment → 9C UI → 9D QA.
 - **2026-10-15 updated decision:** remove redundant standalone lookup UI; move meaningful original-language work into initial study; add third **Deep Dive with Blue Letter Bible** mode using the supplied styled search widget; maintain MCP deferral.
+
+
+### PR #44 — source staging gate (in progress)
+
+[Source-integrity audit and raw-import gate](phase9a-stepbible-source-import.md) verifies downloaded TAGNT/TAHOT source files and SHA-256 evidence before parsing. Raw edition-aware parsing and TBESG/TBESH semantic import remain explicitly pending; do **not** mark Phase 9A as delivered or enable word cards on this basis alone.
