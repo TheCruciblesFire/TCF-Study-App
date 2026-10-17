@@ -16,8 +16,8 @@ This configuration uses Render's **paid Starter service and persistent storage**
 | Name | Secure value to supply |
 | --- | --- |
 | `TCF_OPENAI_API_KEY` | A real OpenAI project API key with funded API billing and access to the selected model. |
-| `TCF_BIBLE_API_KEY` | Your API.Bible key with CSB access for this application. |
-| `BIBLE_ID` | The licensed translation ID from your API.Bible account. Use the same CSB ID that was tested, or another translation your agreement authorizes. |
+| `TCF_BIBLE_API_KEY` | Your API.Bible key with access to the public-domain WEB edition used by this application. |
+| `BIBLE_ID` | Set to `9879dbb7cfe39e4d-01`, API.Bible’s public-domain WEB ID. Confirm it is accessible to your key; live AI study rejects other IDs. |
 
 Enter keys only in Render's secret/environment fields. Never put them in GitHub, SnapPages, a ZIP, or chat. Codex's network-proxy secret bindings are specific to Codex; do not copy a proxy placeholder into Render. A ChatGPT Business subscription does not supply OpenAI API credits. Check the API project/organization that owns the key, independently of the ChatGPT workspace used to develop the app.
 
@@ -39,7 +39,7 @@ The smoke test makes a real, metered John 15 passage study and clears its test c
 
 In the deployed browser, verify:
 
-- John 15:1–8 produces a CSB study and displays the retrieved text, attribution, source links, and explanation/application separately.
+- John 15:1–8 produces a WEB study and displays the retrieved text, attribution, source links, and explanation/application separately.
 - A follow-up such as “How can I apply this today?” stays with the same passage.
 - A different passage and a basic biblical question work.
 - API.Bible's script loads from `https://pkg.api.bible/fumsV3.min.js`, and Scripture usage requests reach `https://fums.api.bible/f3` successfully. These contain opaque usage tokens; do not paste the URLs into chat or issue logs.
