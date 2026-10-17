@@ -1,4 +1,5 @@
 import { formatStudyNotes } from './study-export.js';
+import { parseReference } from './references.js';
 const $ = selector => document.querySelector(selector);
 const form = $('#chat-form'), input = $('#question'), sendButton = $('#send-button');
 const conversation = $('#conversation'), welcome = $('#welcome'), status = $('#request-status');
@@ -264,11 +265,19 @@ blbForm.addEventListener('submit', event => {
   event.preventDefault();
   const criteria = $('#tcf-blb-criteria').value.trim();
   if (!criteria) { $('#tcf-blb-criteria').focus(); return; }
-  const url = new URL('https://www.blueletterbible.org/search/search.cfm');
-  url.searchParams.set('Criteria', criteria);
-  url.searchParams.set('t', $('#tcf-blb-translation').value);
-  const range = blbRange.value.trim();
-  if (range) url.searchParams.set('cscs', range);
+  const selectedTranslation = $('#tcf-blb-translation').value;
+  const translation = /^[a-z0-9]{2,6}$/i.test(selectedTranslation) ? selectedTranslation : 'CSB';
+  const passage = parseReference(criteria);
+  const url = new URL(passage?.url || 'https://www.blueletterbible.org/search/search.cfm');
+  if (passage) {
+    // BLB uses translation/book/chapter/verse for direct passage reading.
+    url.pathname = url.pathname.replace(/^\/kjv\//, `/${translation.toLowerCase()}/`);
+  } else {
+    url.searchParams.set('Criteria', criteria);
+    url.searchParams.set('t', translation);
+    const range = blbRange.value.trim();
+    if (range) url.searchParams.set('cscs', range);
+  }
   // A synchronous, user-initiated browser navigation; no hidden form POST or refresh.
   window.open(url.href, '_blank', 'noopener,noreferrer');
 });
