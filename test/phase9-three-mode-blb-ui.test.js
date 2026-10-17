@@ -17,8 +17,9 @@ test('BLB gateway preserves original GET search and selected translation indepen
  assert.match(html,/name="Criteria"/);
  assert.match(html,/name="t"/);
  assert.match(html,/<option value="CSB" selected>/);
- assert.match(html,/name="cscs" disabled/);
- assert.match(js,/blbRange\.disabled = !blbRange\.value\.trim\(\)/);
+ assert.match(html,/name="cscs" maxlength/);
+ assert.doesNotMatch(html,/name="cscs" disabled/);
+ assert.match(js,/const range = blbRange\.value\.trim\(\)/);
  assert.doesNotMatch(html,/preSearch\.cfm/);
 });
 test('BLB mode hides composer/starters; Ask and Learn and new-study reset remain',()=>{
@@ -42,6 +43,6 @@ test('BLB search uses an explicit user-triggered navigation with stable params',
  assert.doesNotMatch(js,/blbVerseToolsUrl/);
  assert.doesNotMatch(js,/handoff\.href = blbSearchUrl/);
  assert.match(js,/url\.searchParams\.set\('t',/);
- assert.match(js,/if \(!blbRange\.disabled\) url\.searchParams\.set\('cscs',/);
+ assert.match(js,/if \(range\) url\.searchParams\.set\('cscs', range\)/);
  assert.match(js,/window\.open\(url\.href, '_blank', 'noopener,noreferrer'\)/);
 });
