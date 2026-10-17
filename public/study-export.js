@@ -32,7 +32,8 @@ export function formatStudyNotes(answer) {
     lines.push('A study note to consider', study.commentaryInsight.text,
       'AI summary adapted from ' + note.title + ' on ' + note.reference + '. ' + note.copyright,
       'Source summary supplied to the AI: ' + note.text,
-      note.attribution, 'Original work: ' + note.sourceUrl,
+      note.attribution, 'Read the chapter notes: ' + note.sourceViewUrl,
+      'Original work and downloads: ' + note.sourceUrl,
       'License: ' + note.license + ' ' + note.licenseUrl, '');
   }
   lines.push('Keep exploring');
