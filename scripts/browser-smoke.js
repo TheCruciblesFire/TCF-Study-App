@@ -178,11 +178,20 @@ try {
   await frame.getByRole('heading', { name: 'Abiding in Christ', exact: true }).waitFor();
   const handoff = frame.getByRole('link', { name: 'Study this passage further in Blue Letter Bible (CSB) ↗' });
   assert.equal(await handoff.getAttribute('target'), '_top');
-  // Force the anchor fallback to stay inside the iframe; only the widget-style
-  // click handler can still navigate the parent page to BLB.
+  // Packet links must preserve the study tab regardless of their anchor target.
   await handoff.evaluate(node => { node.target = '_self'; });
   await handoff.click();
-  await page.waitForURL('https://www.blueletterbible.org/csb/jhn/15/1/');
+  assert.equal(await frame.locator('.blb-handoff-url').inputValue(), 'https://www.blueletterbible.org/csb/jhn/15/1/');
+  assert.equal(page.url(), 'https://thecruciblesfire.org/embed-test');
+  await frame.locator('.blb-copy-button').click();
+  await frame.locator('.blb-copy-status:not(:empty)').waitFor();
+  await frame.locator('.blb-handoff-close').click();
+  await frame.getByRole('button', { name: 'Start a new study' }).click();
+  await frame.locator('#welcome:visible').waitFor();
+  await frame.locator('[data-study-mode="blb"]').click();
+  await frame.locator('#tcf-blb-criteria').fill('Romans 10:1');
+  await frame.locator('.tcf-blb-submit').click();
+  await page.waitForURL('https://www.blueletterbible.org/csb/rom/10/1/');
   assert.equal(context.pages().length, 1);
   assert.equal((await context.cookies()).length, 0);
   assert.deepEqual(errors, []);
