@@ -37,6 +37,9 @@ test('BLB search uses an explicit user-triggered navigation with stable params',
  assert.match(js,/url\.searchParams\.set\('Criteria', criteria\)/);
  assert.match(js,/link\.href = blbSearchUrl\(word\)/);
  assert.match(js,/answer\.csbPassage\?\.fumsToken/);
+ assert.match(js,/handoff\.href = blbPassageUrl\(passage\.url\)/);
+ assert.match(js,/link\.href = csbDisplayed \? blbPassageUrl/);
+ assert.doesNotMatch(js,/handoff\.href = blbSearchUrl/);
  assert.match(js,/url\.searchParams\.set\('t',/);
  assert.match(js,/if \(!blbRange\.disabled\) url\.searchParams\.set\('cscs',/);
  assert.match(js,/window\.open\(url\.href, '_blank', 'noopener,noreferrer'\)/);
