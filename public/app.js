@@ -168,6 +168,9 @@ function renderAnswer(answer, mount, turnId) {
     license.href = note.licenseUrl; license.target = '_blank'; license.rel = 'noopener noreferrer';
     credit.append(original, document.createTextNode('. ' + note.copyright + ' · '), license);
     section.append(credit);
+    const noteDetails = el('details', 'commentary-source');
+    noteDetails.append(el('summary', '', 'See the source summary sent to the assistant'), el('p', '', note.text));
+    section.append(noteDetails);
     try {
       const url = new URL(note.blbUrl);
       if (url.protocol === 'https:' && url.hostname === 'www.blueletterbible.org' && Array.isArray(note.keywords)) {

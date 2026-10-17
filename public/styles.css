@@ -105,6 +105,8 @@ textarea::placeholder { color: #a9a99e; }
 .commentary-pilot .source-disclosure { font-size: 13px; color: #b3b3a6; margin: 8px 0; }
 .commentary-pilot .commentary-keywords { font-size: 14px; margin: 14px 0 3px; }
 .commentary-pilot a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 3px; }
+.commentary-source summary { color: var(--gold-light); cursor: pointer; font-size: 13px; margin: 9px 0; }
+.commentary-source p { font-size: 14px; margin: 4px 0 9px; }
 .evidence-link { border: 1px solid #605b34; background: #1e1d13; color: var(--gold-light); border-radius: 3px; font-size: 12px; padding: 3px 7px; margin: 0 0 0 6px; vertical-align: middle; }
 .evidence-link:hover { border-color: var(--gold-light); }
 .study-caveat { margin: 24px 0; padding: 17px 20px; background: #19180f; border-left: 2px solid var(--gold); color: #d8d1a3; font-size: 14px; line-height: 1.9; }
