@@ -111,7 +111,7 @@ try {
     });
     await route.fulfill({ response });
   });
-  await context.route('https://thecruciblesfire.org/embed-test', route => route.fulfill({ contentType: 'text/html', body: `<html><head><link rel="icon" href="data:,"></head><style>body{margin:0}iframe{display:block;width:100%;border:0}</style></head><body><iframe id="study" title="Bible study" src="${browserOrigin}" height="950" referrerpolicy="no-referrer"></iframe><script>
+  await context.route('https://thecruciblesfire.org/embed-test', route => route.fulfill({ contentType: 'text/html', body: `<html><head><link rel="icon" href="data:,"></head><style>body{margin:0}iframe{display:block;width:100%;border:0}</style></head><body><iframe id="study" title="Bible study" src="${browserOrigin}" height="950" referrerpolicy="no-referrer" allow="clipboard-write"></iframe><script>
     const frame = document.getElementById('study');
     const appOrigin = '${browserOrigin}';
     const enable = () => frame.contentWindow.postMessage({ type: 'tcf-study:enable-autoheight', parentScroll: true }, appOrigin);
