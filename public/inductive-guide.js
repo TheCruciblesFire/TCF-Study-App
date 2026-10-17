@@ -16,7 +16,8 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {},
   };
   const root = el('section', 'inductive-guide');
   root.setAttribute('aria-label', 'Guided inductive Bible study');
-  const intro = el('p', 'inductive-guide-intro', 'Work through the displayed Scripture yourself with Observe → Interpret → Apply. Your notes stay in this browser tab unless you choose an AI feedback button; then your notes and the WEB passage are sent to OpenAI.');
+  const intro = el('p', 'inductive-guide-intro', 'Work through the displayed Scripture yourself with Observe → Interpret → Apply. ' +
+    (requestFeedback ? 'Your notes stay in this browser tab unless you choose an AI feedback button; then your notes and the WEB passage are sent to OpenAI.' : 'Your notes stay in this browser tab. AI feedback is unavailable in this version.'));
   const start = el('button', 'inductive-guide-start', 'Start guided study');
   start.type = 'button';
   root.append(el('h3', '', 'Study the passage step by step'), intro, start);
