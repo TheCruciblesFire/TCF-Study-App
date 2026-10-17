@@ -109,12 +109,49 @@ try {
     });
     await route.fulfill({ response });
   });
-  await context.route('https://thecruciblesfire.org/embed-test', route => route.fulfill({ contentType: 'text/html', body: `<html><head><link rel="icon" href="data:,"></head><body><iframe title="Bible study" src="${browserOrigin}" width="800" height="900"></iframe></body></html>` }));
+  await context.route('https://thecruciblesfire.org/embed-test', route => route.fulfill({ contentType: 'text/html', body: `<html><head><link rel="icon" href="data:,"></head><style>body{margin:0}iframe{display:block;width:100%;border:0}</style></head><body><iframe id="study" title="Bible study" src="${browserOrigin}" height="950" referrerpolicy="no-referrer"></iframe><script>
+    const frame = document.getElementById('study');
+    const appOrigin = '${browserOrigin}';
+    const enable = () => frame.contentWindow.postMessage({ type: 'tcf-study:enable-autoheight' }, appOrigin);
+    window.addEventListener('message', event => {
+      if (event.origin !== appOrigin || event.source !== frame.contentWindow) return;
+      if (event.data?.type === 'tcf-study:ready') return enable();
+      const height = event.data?.height;
+      if (event.data?.type !== 'tcf-study:height' || !Number.isFinite(height) || height < 200 || height > 100000) return;
+      frame.style.height = (Math.ceil(height) + 2) + 'px';
+      frame.dataset.autoheight = 'true';
+    });
+    frame.addEventListener('load', enable);
+  </script></body></html>` }));
   await page.goto('https://thecruciblesfire.org/embed-test');
   const frame = page.frameLocator('iframe');
   await frame.locator('#question:enabled').waitFor();
+  await frame.locator('html.tcf-autoheight').waitFor();
+  await page.locator('iframe[data-autoheight="true"]').waitFor();
+  async function assertPageScrollOnly() {
+    const dimensions = await frame.locator('body').evaluate(() => ({
+      content: document.documentElement.scrollHeight,
+      viewport: window.innerHeight,
+      studyOverflow: getComputedStyle(document.querySelector('.study-body')).overflowY,
+    }));
+    assert.equal(dimensions.studyOverflow, 'visible');
+    assert.ok(dimensions.viewport >= dimensions.content - 3, JSON.stringify(dimensions));
+  }
+  await assertPageScrollOnly();
+  const initialHeight = await page.locator('iframe').evaluate(node => node.clientHeight);
   await frame.getByRole('button', { name: /LOOK A LITTLE CLOSER/ }).click();
   await frame.getByRole('heading', { name: 'The Shepherd who stays near' }).waitFor();
+  await page.waitForFunction(before => document.querySelector('iframe').clientHeight > before + 100, initialHeight);
+  await assertPageScrollOnly();
+  const studyHeight = await page.locator('iframe').evaluate(node => node.clientHeight);
+  await frame.getByRole('button', { name: 'Start a new study' }).click();
+  await frame.locator('#welcome:visible').waitFor();
+  await page.waitForFunction(before => document.querySelector('iframe').clientHeight < before - 100, studyHeight);
+  await assertPageScrollOnly();
+  const mobileHeight = await page.locator('iframe').evaluate(node => node.clientHeight);
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.waitForFunction(before => document.querySelector('iframe').clientHeight !== before, mobileHeight);
+  await assertPageScrollOnly();
   assert.equal((await context.cookies()).length, 0);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: desktop, mobile, passage sources, follow-up, reset, dialog, XSS text, and cross-site iframe without cookies.');
