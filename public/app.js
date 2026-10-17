@@ -323,7 +323,9 @@ function showBlbHandoff(url, trigger) {
   status.setAttribute('role', 'status');
   const copyUrl = async () => {
     try {
-      if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
+      const policy = document.permissionsPolicy || document.featurePolicy;
+      if (policy?.allowsFeature?.('clipboard-write') === false || !navigator.clipboard?.writeText)
+        throw Error('Clipboard unavailable');
       await navigator.clipboard.writeText(url);
       status.textContent = 'Link copied. Open your browser and paste it there.';
     } catch {
