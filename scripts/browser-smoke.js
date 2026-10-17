@@ -32,6 +32,8 @@ try {
   await page.getByRole('button', { name: 'Read source: John 15:1–8', exact: true }).first().click();
   assert.equal(await page.locator('.source-card').first().getAttribute('open'), '');
   assert.match(await page.locator('.scripture-text').first().textContent(), /I am the true vine/);
+  assert.equal(await page.locator('.source-card').first().getByRole('link', { name: /Read this passage on Blue Letter Bible/ }).getAttribute('href'), 'https://www.blueletterbible.org/csb/jhn/15/1/');
+  assert.equal(await page.getByRole('link', { name: 'Explore commentaries for John 15:1–8 ↗' }).getAttribute('href'), 'https://www.blueletterbible.org/verse/csb/jhn/15/1/');
   await page.getByRole('button', { name: 'How can I apply this today?', exact: true }).click();
   await page.getByRole('heading', { name: 'Abiding in Christ: putting it into practice' }).waitFor();
   await page.screenshot({ path: 'test-results/study.png', fullPage: true });
