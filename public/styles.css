@@ -502,8 +502,14 @@ transition: none !important;
 
 #blb-gateway { margin-top: 28px; }
 #blb-gateway[hidden], .composer-wrap[hidden], .starter-heading[hidden], .starter-grid[hidden], .welcome-caption[hidden] { display: none !important; }
-.study-mode-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.study-mode-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 760px) { .study-mode-options { grid-template-columns: 1fr; } }
 
 .blb-fallback-note { color: #d3d0bc; font-size: 13px; line-height: 1.6; margin: 14px 0 4px; }
 .blb-fallback-note a { color: var(--gold-light); text-underline-offset: 3px; }
+
+.csb-reading { border: 1px solid #5b4e32; border-radius: 5px; padding: 20px 24px; margin: 22px 0 26px; background: #14130f; }
+.csb-reading h3 { color: var(--gold-light); font: 600 17px var(--label); letter-spacing: .5px; margin: 0 0 12px; }
+.csb-reading .scripture-text { margin-bottom: 14px; }
+.csb-reading .copyright { color: var(--muted); font-size: 12px; }
+.csb-reading .source-disclosure { margin-bottom: 0; }
