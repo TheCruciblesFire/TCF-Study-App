@@ -513,3 +513,9 @@ transition: none !important;
 .csb-reading .scripture-text { margin-bottom: 14px; }
 .csb-reading .copyright { color: var(--muted); font-size: 12px; }
 .csb-reading .source-disclosure { margin-bottom: 0; }
+
+/* Opt-in page scrolling for the SnapPages auto-height embed. */
+html.tcf-autoheight .app-shell { min-height: 0; }
+html.tcf-autoheight .sidebar { position: static; inset: auto; overflow: visible; flex-shrink: 0; }
+html.tcf-autoheight .main-panel { margin-left: 0; height: auto; min-height: 0; overflow: visible; }
+html.tcf-autoheight .study-body { flex: 0 0 auto; min-height: 0; overflow: visible; overscroll-behavior-y: auto; }
