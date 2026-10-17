@@ -104,7 +104,7 @@ export function createApp(config, overrides = {}) {
         throw new AppError(422, 'FEEDBACK_UNAVAILABLE', 'Interactive feedback requires live study mode.');
       store.begin(req.studySession.id); began = true;
       reservation = store.reserve();
-      const feedback = await providers.observationFeedback(controlling.reference, body.data.notes, meter);
+      const feedback = await providers.observationFeedback(controlling, body.data.notes, meter);
       if (reservation) { store.settle(reservation, meter, false); reservation = undefined; }
       res.json({ feedback, reference: controlling.reference, note: 'AI suggestions, not a formal passage-faithfulness audit.' });
     } catch (error) {
@@ -127,7 +127,7 @@ export function createApp(config, overrides = {}) {
         throw new AppError(422, 'FEEDBACK_UNAVAILABLE', 'Interpretation feedback requires live study mode.');
       store.begin(req.studySession.id); began = true;
       reservation = store.reserve();
-      const feedback = await providers.interpretationFeedback(controlling.reference, body.data.notes, meter);
+      const feedback = await providers.interpretationFeedback(controlling, body.data.notes, meter);
       if (reservation) { store.settle(reservation, meter, false); reservation = undefined; }
       res.json({ feedback, reference: controlling.reference, note: 'AI suggestions, not a formal passage-faithfulness audit.' });
     } catch (error) {
@@ -150,7 +150,7 @@ export function createApp(config, overrides = {}) {
         throw new AppError(422, 'FEEDBACK_UNAVAILABLE', 'Application feedback requires live study mode.');
       store.begin(req.studySession.id); began = true;
       reservation = store.reserve();
-      const feedback = await providers.applicationFeedback(controlling.reference, body.data.notes, meter);
+      const feedback = await providers.applicationFeedback(controlling, body.data.notes, meter);
       if (reservation) { store.settle(reservation, meter, false); reservation = undefined; }
       res.json({ feedback, reference: controlling.reference, note: 'AI guidance, not a formal passage-faithfulness audit or personal directive.' });
     } catch (error) {
@@ -190,14 +190,14 @@ export function createApp(config, overrides = {}) {
           }
           return sources;
         },
-        verifyStudy: (data, sources) => validateStudy(data, sources, config.APP_MODE === 'live'),
+        verifyStudy: (data, sources) => validateStudy(data, sources),
       });
       const { route, sources, study } = result;
       const answer = !result.workflow.supported
         ? { mode: config.APP_MODE, kind: 'unsupported', sources: [], study: null,
             message: 'I can help with a passage study or a basic biblical question. Full topical surveys, original-language research, commentary searches, and deep dives are not available in this version. Try a specific passage or a narrower question.' }
         : { mode: config.APP_MODE, kind: route.kind, sources: explainSources(study, sources), study,
-             ...(config.APP_MODE === 'live' ? { grounding: 'reference_only' } : {}),
+             ...(config.APP_MODE === 'live' ? { grounding: 'web_text' } : {}),
             ...(route.key ? { demoKey: route.key } : {}) };
       // Analytics tokens belong only in the immediate response, never stored in history.
       const retained = structuredClone(answer);
