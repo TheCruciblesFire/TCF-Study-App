@@ -178,19 +178,33 @@ try {
   await frame.getByRole('heading', { name: 'Abiding in Christ', exact: true }).waitFor();
   const handoff = frame.getByRole('link', { name: 'Study this passage further in Blue Letter Bible (CSB) ↗' });
   assert.equal(await handoff.getAttribute('target'), '_top');
-  // Packet links must preserve the study tab regardless of their anchor target.
-  await handoff.evaluate(node => { node.target = '_self'; });
+  // A desktop browser follows the packet passage link from the embed.
   await handoff.click();
-  assert.equal(await frame.locator('.blb-handoff-url').inputValue(), 'https://www.blueletterbible.org/csb/jhn/15/1/');
+  await page.waitForURL('https://www.blueletterbible.org/csb/jhn/15/1/');
+  assert.equal(context.pages().length, 1);
+  // Simulate a mobile user agent in the same cross-origin SnapPages embed.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      get: () => 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    });
+  });
+  await page.goto('https://thecruciblesfire.org/embed-test');
+  const mobileFrame = page.frameLocator('iframe');
+  await mobileFrame.locator('#question:enabled').waitFor();
+  await mobileFrame.getByRole('button', { name: /EXPLORE A PASSAGE/ }).click();
+  await mobileFrame.getByRole('heading', { name: 'Abiding in Christ', exact: true }).waitFor();
+  await mobileFrame.getByRole('link', { name: 'Study this passage further in Blue Letter Bible (CSB) ↗' }).click();
+  assert.equal(await mobileFrame.locator('.blb-handoff-url').inputValue(), 'https://www.blueletterbible.org/csb/jhn/15/1/');
   assert.equal(page.url(), 'https://thecruciblesfire.org/embed-test');
-  await frame.locator('.blb-copy-button').click();
-  await frame.locator('.blb-copy-status:not(:empty)').waitFor();
-  await frame.locator('.blb-handoff-close').click();
-  await frame.locator('.new-study').click();
-  await frame.locator('#welcome:visible').waitFor();
-  await frame.locator('[data-study-mode="blb"]').click();
-  await frame.locator('#tcf-blb-criteria').fill('Romans 10:1');
-  await frame.locator('.tcf-blb-submit').click();
+  await mobileFrame.locator('.blb-copy-button').click();
+  await mobileFrame.locator('.blb-copy-status:not(:empty)').waitFor();
+  await mobileFrame.locator('.blb-handoff-close').click();
+  await mobileFrame.locator('.new-study').click();
+  await mobileFrame.locator('#welcome:visible').waitFor();
+  await mobileFrame.locator('[data-study-mode="blb"]').click();
+  await mobileFrame.locator('#tcf-blb-criteria').fill('Romans 10:1');
+  await mobileFrame.locator('.tcf-blb-submit').click();
   await page.waitForURL('https://www.blueletterbible.org/csb/rom/10/1/');
   assert.equal(context.pages().length, 1);
   assert.equal((await context.cookies()).length, 0);
