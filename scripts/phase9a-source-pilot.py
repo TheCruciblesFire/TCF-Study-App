@@ -278,10 +278,16 @@ def review_examples(raw: dict[str, bytes], step_g_ids: set[str],
     step_hebrew_raw_fields = []
     for line in raw["step_psalms"].decode("utf-8-sig").splitlines():
         columns = line.split("\t")
-        if columns and re.match(r"^Psa\\.23\\.1(?=[^0-9]|$)", columns[0]) and len(columns) > 4:
+        if columns and re.match(r"^Psa[.]23[.]1(?=[^0-9]|$)", columns[0]) and len(columns) > 4:
             step_hebrew_raw_fields.append({"ref": columns[0], "strongField": columns[4]})
+    shepherd_lexicon_raw = [
+        line.split("\t")[:8]
+        for line in raw["step_hebrew_lexicon"].decode("utf-8-sig").splitlines()
+        if line.startswith("H7462")
+    ]
     return {"greek": greek, "hebrew": hebrew,
             "stepHebrewRawFields": step_hebrew_raw_fields,
+            "shepherdLexiconRaw": shepherd_lexicon_raw,
             "lexiconRows": lexicons}
 
 
