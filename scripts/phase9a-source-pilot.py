@@ -262,20 +262,27 @@ def review_examples(raw: dict[str, bytes], step_g_ids: set[str],
             hebrew.append({"surface": (word.text or "").strip(), "lemmaField": lemma,
                            "morph": word.get("morph"), "strong": strong,
                            "stepIdOverlap": strong in step_h_ids if strong else False,
-                           "strictlyEligible": strong in hebrew_target if strong else False})
+                           "plainBaseId": strong is not None})
     lexicons = {}
     for language, key, targets in [("G", "step_greek_lexicon", greek_target),
                                    ("H", "step_hebrew_lexicon", hebrew_target)]:
         for line in raw[key].decode("utf-8-sig").splitlines():
             fields = line.split("\t")
-            if len(fields) < 8 or not re.fullmatch(language + r"[0-9]{4}", fields[0]):
+            if len(fields) < 8 or not (re.fullmatch(language + r"[0-9]{4}", fields[0]) or (language == "H" and fields[0].startswith("H7462"))):
                 continue
             strong = basic_id(fields[0][1:].lstrip("0"), language)
-            if strong in targets:
-                lexicons.setdefault(strong, []).append({
+            if strong in targets or (language == "H" and fields[0].startswith("H7462")):
+                lexicons.setdefault(strong or fields[0], []).append({
                     "disambiguated": fields[1], "lemma": fields[3],
                     "gloss": fields[6], "meaning": fields[7]})
-    return {"greek": greek, "hebrew": hebrew, "lexiconRows": lexicons}
+    step_hebrew_raw_fields = []
+    for line in raw["step_psalms"].decode("utf-8-sig").splitlines():
+        columns = line.split("\t")
+        if columns and re.match(r"^Psa\\.23\\.1(?=[^0-9]|$)", columns[0]) and len(columns) > 4:
+            step_hebrew_raw_fields.append({"ref": columns[0], "strongField": columns[4]})
+    return {"greek": greek, "hebrew": hebrew,
+            "stepHebrewRawFields": step_hebrew_raw_fields,
+            "lexiconRows": lexicons}
 
 
 def main() -> None:
