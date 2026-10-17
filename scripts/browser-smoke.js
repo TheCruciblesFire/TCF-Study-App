@@ -60,6 +60,7 @@ try {
   assert.equal(blbUrl.searchParams.get('Criteria'), 'Romans 10');
   assert.equal(blbUrl.searchParams.get('t'), 'CSB');
   assert.equal(blbUrl.searchParams.has('cscs'), false);
+  await page.locator('.tcf-blb-summary').click();
   await page.locator('#tcf-blb-range').fill('Rom 10');
   blbUrl = await searchBlb('faith');
   assert.equal(blbUrl.searchParams.get('Criteria'), 'faith');
