@@ -39,37 +39,39 @@ try {
   await page.screenshot({ path: 'test-results/study.png', fullPage: true });
   await page.locator('.new-study').click();
   await page.locator('#welcome:visible').waitFor(); assert.equal(await page.locator('.turn').count(), 0);
-  // Exercise the BLB gateway as a visitor, including its new-tab navigation.
+  // Exercise same-window BLB navigation, including the Deep Dive gateway.
   await context.route('https://www.blueletterbible.org/**', route => route.fulfill({ contentType: 'text/html', body: '<title>BLB destination</title>' }));
   await page.locator('[data-study-mode="blb"]').click();
   await page.locator('#blb-gateway:visible').waitFor();
   assert.equal(await page.locator('.composer-wrap').isHidden(), true);
-  async function searchBlb(criteria) {
+  async function searchBlb(criteria, translation = 'CSB', range = '') {
     await page.locator('#tcf-blb-criteria').fill(criteria);
-    const popupPromise = context.waitForEvent('page');
+    await page.locator('#tcf-blb-translation').selectOption(translation);
+    if (range) {
+      await page.locator('.tcf-blb-summary').click();
+      await page.locator('#tcf-blb-range').fill(range);
+    }
     await page.locator('.tcf-blb-submit').click();
-    const popup = await popupPromise;
-    await popup.waitForLoadState('domcontentloaded');
-    const url = new URL(popup.url());
-    await popup.close();
-    assert.equal(url.origin, 'https://www.blueletterbible.org');
+    await page.waitForURL('https://www.blueletterbible.org/**');
+    const url = new URL(page.url());
+    assert.equal(context.pages().length, 1);
+    await page.goto(config.PUBLIC_ORIGIN);
+    await page.locator('#question:enabled').waitFor();
+    await page.locator('[data-study-mode="blb"]').click();
     return url;
   }
   let blbUrl = await searchBlb('Romans 10:1');
   assert.equal(blbUrl.href, 'https://www.blueletterbible.org/csb/rom/10/1/');
   blbUrl = await searchBlb('John 3:16');
   assert.equal(blbUrl.href, 'https://www.blueletterbible.org/csb/jhn/3/16/');
-  await page.locator('#tcf-blb-translation').selectOption('ESV');
-  blbUrl = await searchBlb('Romans 10');
+  blbUrl = await searchBlb('Romans 10', 'ESV');
   assert.equal(blbUrl.href, 'https://www.blueletterbible.org/esv/rom/10/1/');
-  await page.locator('#tcf-blb-translation').selectOption('CSB');
-  await page.locator('.tcf-blb-summary').click();
-  await page.locator('#tcf-blb-range').fill('Rom 10');
-  blbUrl = await searchBlb('faith');
+  blbUrl = await searchBlb('faith', 'CSB', 'Rom 10');
   assert.equal(blbUrl.pathname, '/search/search.cfm');
   assert.equal(blbUrl.searchParams.get('Criteria'), 'faith');
   assert.equal(blbUrl.searchParams.get('t'), 'CSB');
   assert.equal(blbUrl.searchParams.get('cscs'), 'Rom 10');
+  assert.equal(await page.locator('.tcf-blb-example').first().getAttribute('target'), '_top');
   await page.locator('[data-study-mode="explore"]').click();
   assert.equal(await page.locator('.composer-wrap').isVisible(), true);
   // Mobile interaction and layout, including keyboard submission and modal focus.
@@ -112,10 +114,20 @@ try {
   await context.route('https://thecruciblesfire.org/embed-test', route => route.fulfill({ contentType: 'text/html', body: `<html><head><link rel="icon" href="data:,"></head><style>body{margin:0}iframe{display:block;width:100%;border:0}</style></head><body><iframe id="study" title="Bible study" src="${browserOrigin}" height="950" referrerpolicy="no-referrer"></iframe><script>
     const frame = document.getElementById('study');
     const appOrigin = '${browserOrigin}';
-    const enable = () => frame.contentWindow.postMessage({ type: 'tcf-study:enable-autoheight' }, appOrigin);
+    const enable = () => frame.contentWindow.postMessage({ type: 'tcf-study:enable-autoheight', parentScroll: true }, appOrigin);
     window.addEventListener('message', event => {
       if (event.origin !== appOrigin || event.source !== frame.contentWindow) return;
       if (event.data?.type === 'tcf-study:ready') return enable();
+      if (event.data?.type === 'tcf-study:scroll-to') {
+        const top = event.data.top;
+        if (!Number.isFinite(top) || top < 0 || top > 100000) return;
+        requestAnimationFrame(() => {
+          const frameTop = frame.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo(0, Math.max(0, frameTop + top - 16));
+          frame.dataset.scrolledTo = String(top);
+        });
+        return;
+      }
       const height = event.data?.height;
       if (event.data?.type !== 'tcf-study:height' || !Number.isFinite(height) || height < 200 || height > 100000) return;
       frame.style.height = (Math.ceil(height) + 2) + 'px';
@@ -143,6 +155,16 @@ try {
   await frame.getByRole('heading', { name: 'The Shepherd who stays near' }).waitFor();
   await page.waitForFunction(before => document.querySelector('iframe').clientHeight > before + 100, initialHeight);
   await assertPageScrollOnly();
+  await page.locator('iframe').evaluate(node => {
+    delete node.dataset.scrolledTo;
+    window.scrollTo(0, 0);
+  });
+  await frame.getByRole('button', { name: /Read source: Psalm 23/ }).first().evaluate(node => node.click());
+  await page.waitForFunction(() => {
+    const node = document.querySelector('iframe');
+    return Number(node.dataset.scrolledTo) > 0 && window.scrollY > 0;
+  });
+  assert.equal(await frame.locator('.source-card').first().getAttribute('open'), '');
   const studyHeight = await page.locator('iframe').evaluate(node => node.clientHeight);
   await frame.getByRole('button', { name: 'Start a new study' }).click();
   await frame.locator('#welcome:visible').waitFor();
@@ -152,6 +174,13 @@ try {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.waitForFunction(before => document.querySelector('iframe').clientHeight !== before, mobileHeight);
   await assertPageScrollOnly();
+  await frame.getByRole('button', { name: /EXPLORE A PASSAGE/ }).click();
+  await frame.getByRole('heading', { name: 'Abiding in Christ', exact: true }).waitFor();
+  const handoff = frame.getByRole('link', { name: 'Study this passage further in Blue Letter Bible (CSB) ↗' });
+  assert.equal(await handoff.getAttribute('target'), '_top');
+  await handoff.click();
+  await page.waitForURL('https://www.blueletterbible.org/csb/jhn/15/1/');
+  assert.equal(context.pages().length, 1);
   assert.equal((await context.cookies()).length, 0);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: desktop, mobile, passage sources, follow-up, reset, dialog, XSS text, and cross-site iframe without cookies.');
