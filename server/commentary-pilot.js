@@ -20,7 +20,7 @@ const notes = [
     chapter: 23,
     verse: 1,
     text: 'The psalm uses shepherd imagery for the Lord’s personal care. In the ancient Near East, rulers were also described as shepherds.',
-    keywords: ['shepherd', 'care'],
+    keywords: ['shepherd', 'need'],
   },
 ];
 
@@ -41,5 +41,5 @@ export function getCommentaryPilot(reference) {
   if (!note) return null;
   const verse = parseReference(note.reference);
   return { id: note.id, reference: note.reference, text: note.text, keywords: [...note.keywords],
-    blbUrl: verse.url, blbTranslation: 'KJV', ...COMMENTARY_PILOT_SOURCE };
+    blbUrl: verse.url.replace('/kjv/', '/csb/'), blbTranslation: 'CSB', ...COMMENTARY_PILOT_SOURCE };
 }
