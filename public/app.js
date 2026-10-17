@@ -153,7 +153,7 @@ function renderAnswer(answer, mount, turnId) {
     const studyMore = el('p', 'study-more');
     const link = el('a', 'source-link', 'Study this passage further in Blue Letter Bible (CSB) ↗');
     link.href = blbPassageUrl(answer.sources[0].url); link.target = '_top';
-    studyMore.append(link, el('span', 'source-disclosure', ' On BLB, open Tools beside a verse for commentaries and language resources.'));
+    studyMore.append(link, el('span', 'source-disclosure', window.parent !== window ? ' This copies a BLB link so your study stays open. On BLB, open Tools beside a verse for commentaries and language resources.' : ' On BLB, open Tools beside a verse for commentaries and language resources.'));
     card.append(studyMore);
   } catch { /* Keep the study available if its external passage URL is invalid. */ }
   if (answer.csbPassage) {
@@ -203,7 +203,7 @@ function renderAnswer(answer, mount, turnId) {
           link.setAttribute('aria-label', 'Explore ' + word + ' in ' + note.reference + ' on Blue Letter Bible');
           deepDive.append(link);
         });
-        section.append(deepDive, el('p', 'source-disclosure', 'Each word opens a CSB word search on BLB. Select a matching verse and its Tools for language study; these English words are not verified Strong’s entries.'));
+        section.append(deepDive, el('p', 'source-disclosure', 'Each word leads to a CSB word search on BLB. In the embedded app, copy the link into your browser. Select a matching verse and its Tools for language study; these English words are not verified Strong’s entries.'));
       }
     } catch { /* The attributed note remains available without the external link. */ }
     card.append(section);
@@ -303,15 +303,55 @@ document.querySelectorAll('[data-new-study]').forEach(button => button.addEventL
   } catch (error) { announce(error.message, true); }
   finally { setBusy(false); input.focus({ preventScroll: true }); }
 }));
-// Embedded BLB links use the same top-page navigation as the working Deep Dive widget.
+// A study packet must stay loaded in Subsplash's in-app browser. Its BLB
+// links provide a copyable URL; the separate Deep Dive widget navigates directly.
+function showBlbHandoff(url, trigger) {
+  document.querySelector('.blb-handoff')?.remove();
+  const panel = el('section', 'blb-handoff');
+  panel.setAttribute('role', 'region');
+  panel.setAttribute('aria-label', 'Blue Letter Bible link');
+  const heading = el('h3', '', 'Continue in Blue Letter Bible');
+  const instructions = el('p', '', 'Copy this link and paste it into Safari or Chrome. Your study stays open here.');
+  const label = el('label', 'blb-handoff-label', 'Blue Letter Bible address');
+  const field = el('input', 'blb-handoff-url');
+  field.type = 'text'; field.readOnly = true; field.value = url;
+  field.id = 'blb-handoff-url'; label.htmlFor = field.id;
+  field.addEventListener('focus', () => field.select());
+  const copy = el('button', 'blb-copy-button', 'Copy link');
+  copy.type = 'button';
+  const status = el('p', 'blb-copy-status', '');
+  status.setAttribute('role', 'status');
+  const copyUrl = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(url);
+      status.textContent = 'Link copied. Open your browser and paste it there.';
+    } catch {
+      field.focus({ preventScroll: true }); field.select();
+      let copied = false;
+      try { copied = document.execCommand?.('copy') === true; } catch { /* Address remains selectable. */ }
+      status.textContent = copied ? 'Link copied. Open your browser and paste it there.' : 'Select the address above and copy it, then paste it in your browser.';
+    }
+  };
+  copy.addEventListener('click', copyUrl);
+  const close = el('button', 'blb-handoff-close', 'Close');
+  close.type = 'button';
+  close.addEventListener('click', () => { panel.remove(); trigger.focus({ preventScroll: true }); });
+  panel.append(heading, instructions, label, field, copy, close, status);
+  const mount = trigger.closest('p, .source-content') || trigger;
+  mount.after(panel);
+  copyUrl();
+  copy.focus({ preventScroll: true });
+  scrollToElement(panel);
+}
 if (window.parent !== window) {
   document.addEventListener('click', event => {
-    const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    const link = event.target instanceof Element ? event.target.closest('.answer-card a[href]') : null;
     if (!link) return;
     const url = new URL(link.href);
     if (url.protocol !== 'https:' || url.hostname !== 'www.blueletterbible.org') return;
     event.preventDefault();
-    window.top.location.href = url.href;
+    showBlbHandoff(url.href, link);
   });
 }
 const dialog = $('#info-dialog');
