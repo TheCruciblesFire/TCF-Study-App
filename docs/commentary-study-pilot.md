@@ -1,6 +1,6 @@
 # Bounded commentary study pilot
 
-**Status:** Draft pilot behind `COMMENTARY_PILOT_ENABLED=true`. The default is false. This work does not complete Phase 9A, publish original-language cards, change Render, or replace the three study choices.
+**Status:** Draft pilot behind `COMMENTARY_PILOT_ENABLED=true`. The default is false for ordinary services. On a Render PR preview, the pilot enables itself and uses the preview URL and temporary local data. This work does not complete Phase 9A, publish original-language cards, or replace the three study choices.
 
 ## User experience
 
@@ -23,3 +23,9 @@ The app continues to display API.Bible's public-domain World English Bible and r
 5. Measure prompt size, costs, accessibility, and reader comprehension before considering wider coverage or enabling the flag on Render.
 
 This pilot is deliberately small. Expanding it calls for an ingestion pipeline with pinned source data, passage-range matching, per-note provenance, source/license review, and quality evaluation. The pending Phase 9A review is still required for any in-app original-language or Strong's cards.
+
+## Live PR preview
+
+For PR #75, enable **Manual** Pull Request Previews in the existing Render service's **Previews** tab, then add the GitHub label `render-preview` to the PR. Render creates a separate temporary instance and URL. Render copies the base service's settings, including API credentials, when it creates the preview. The branch overrides the copied public origin with `RENDER_EXTERNAL_URL`, uses `/tmp/tcf-commentary-preview` rather than the production disk, enables this bounded pilot, and sets preview AI budgets to $1 daily and $2 monthly. The preview's temporary database and usage records disappear when its instance is removed or restarted.
+
+The preview is publicly reachable by URL and can make metered API.Bible/OpenAI calls. Share the URL only with testers and do not enter sensitive personal information. Render bills the preview at the base service's compute rate until the PR is closed or the preview is removed. Closing or merging the PR removes the preview automatically.

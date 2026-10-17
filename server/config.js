@@ -26,8 +26,18 @@ const schema = z.object({
   COMMENTARY_PILOT_ENABLED: z.enum(['true', 'false']).default('false').transform(value => value === 'true'),
 });
 export function loadConfig(env = process.env) {
+  // Render PR previews copy production settings. Give this temporary instance
+  // its own origin, ephemeral database, and bounded AI budget.
+  const preview = env.IS_PULL_REQUEST === 'true';
+  if (preview && !env.RENDER_EXTERNAL_URL) throw new Error('Render preview URL is required');
   const parsed = schema.safeParse({ ...env,
-    PUBLIC_ORIGIN: env.PUBLIC_ORIGIN || env.RENDER_EXTERNAL_URL || 'http://localhost:3000',
+    PUBLIC_ORIGIN: preview ? env.RENDER_EXTERNAL_URL : env.PUBLIC_ORIGIN || env.RENDER_EXTERNAL_URL || 'http://localhost:3000',
+    ...(preview ? {
+      DATA_DIR: '/tmp/tcf-commentary-preview',
+      COMMENTARY_PILOT_ENABLED: 'true',
+      DAILY_BUDGET_USD: '1',
+      MONTHLY_BUDGET_USD: '2',
+    } : {}),
   });
   if (!parsed.success) throw new Error(`Invalid configuration: ${parsed.error.issues.map(i => i.path.join('.')).join(', ')}`);
   const config = parsed.data;

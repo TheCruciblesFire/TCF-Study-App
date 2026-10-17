@@ -80,3 +80,16 @@ test('disabled pilot leaves the generation payload and response unchanged', asyn
   assert.equal(JSON.parse(request.messages[1].content).commentaryNote, undefined);
   assert.equal(request.response_format.json_schema.schema.properties.commentaryInsight, undefined);
 });
+
+test('Render PR preview isolates origin, data, and spending from production settings', () => {
+  const config = loadConfig({ APP_MODE: 'live', TCF_OPENAI_API_KEY: 'test-openai', TCF_BIBLE_API_KEY: 'test-bible',
+    BIBLE_ID: WEB_BIBLE_ID, IS_PULL_REQUEST: 'true', RENDER_EXTERNAL_URL: 'https://tcf-preview.onrender.com',
+    PUBLIC_ORIGIN: 'https://tcf-study-app.onrender.com', DATA_DIR: '/var/data/tcf',
+    COMMENTARY_PILOT_ENABLED: 'false', DAILY_BUDGET_USD: '2', MONTHLY_BUDGET_USD: '20' });
+  assert.equal(config.PUBLIC_ORIGIN, 'https://tcf-preview.onrender.com');
+  assert.equal(config.DATA_DIR, '/tmp/tcf-commentary-preview');
+  assert.equal(config.COMMENTARY_PILOT_ENABLED, true);
+  assert.equal(config.DAILY_BUDGET_USD, 1);
+  assert.equal(config.MONTHLY_BUDGET_USD, 2);
+  assert.throws(() => loadConfig({ IS_PULL_REQUEST: 'true' }), /Render preview URL is required/);
+});
