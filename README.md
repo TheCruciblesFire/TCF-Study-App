@@ -2,7 +2,7 @@
 
 A Scripture-centered, embeddable study companion for The Crucible’s Fire. The first workflow covers a passage or basic biblical question, retrieved Scripture, structured study, and follow-up conversation. No visitor account is required.
 
-**Current status:** the live request path and Render deployment configuration are implemented, and the existing Render app responds in live mode. See the [release-readiness record](docs/release-readiness-2026-10-16.md) for independently checked behavior, automated validation, and outstanding licensing, production-generation, and SnapPages acceptance gates. Earlier operator-reported generation success is recorded in the [V1 acceptance history](docs/v1-deployment-acceptance.md). Automated tests use fixtures, and ZIP previews remain prepared examples rather than live AI responses.
+**Current status:** the public-domain WEB text-grounded live study and optional Guided Study feedback are deployed on Render at commit `84a7508`. Main CI passed and the operator confirmed live acceptance of the study experience and SnapPages embed. See the [current release status](docs/release-status-2026-10-16-web.md) for evidence boundaries and the remaining Phase 9A gate. The [earlier release-readiness record](docs/release-readiness-2026-10-16.md) is historical. Automated tests use fixtures, and ZIP previews remain prepared examples rather than live AI responses.
 
 **Resuming on another machine?** Start with the [machine handoff](docs/machine-handoff.md) for setup, completed work, remaining gates, and how to regenerate local review evidence.
 
@@ -10,7 +10,7 @@ A Scripture-centered, embeddable study companion for The Crucible’s Fire. The 
 
 [Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FTheCruciblesFire%2FTCF-Study-App)
 
-See the [Render deployment guide](docs/render-deployment.md) for the paid service/disk configuration, secure credentials, API billing, readiness checks and SnapPages embedding. Keys must be entered securely in the host; they are not included in this repository or the preview packages.
+See the [Render deployment guide](docs/render-deployment.md) for the current Docker/10 GB service baseline, secure credentials, API billing, readiness checks and SnapPages embedding. The Deploy to Render link creates a new service; it does not update the connected production service. Keys must be entered securely in the host; they are not included in this repository or the preview packages.
 
 ## Download the packaged preview
 
@@ -121,9 +121,9 @@ Add the exact parent website origin to `EMBED_ORIGINS`. The app’s CSP frame al
 
 The API also accepts browser-confirmed same-origin requests through an HTTPS reverse proxy, so an alternate app address can submit chat without relying on untrusted host/forwarded headers. Browsers lacking Fetch Metadata and command-line clients must use the configured `PUBLIC_ORIGIN`. Cross-site and same-site cross-origin browser requests remain blocked; no cross-origin API access is enabled. The browser regression test covers an HTTPS app origin that differs from the backend’s configured local origin.
 
-## Live acceptance before public launch
+## Live acceptance checklist
 
-After supplying credentials and publishing/hosting configuration, run an actual John 15:1–8 study, a different passage, a basic biblical question, and a pronoun-only follow-up. Check the selected passage/translation, context, every citation, copyright and translation information, FUMS network reporting, aggregate token usage and estimated price, error handling, and actual SnapPages framing. Verify that your OpenAI and Bible plan allow the intended use. Live-provider receipt and public deployment are not established by the fake-provider tests.
+The operator marked the live acceptance item passed after the WEB deployment on October 16, 2026. For future releases, run an actual John 15:1–8 study, a different passage, a basic biblical question, and a pronoun-only follow-up. Check the selected passage/translation, context, every citation, copyright and translation information, FUMS network reporting, aggregate token usage and estimated price, error handling, and actual SnapPages framing. Verify that your OpenAI and Bible plan allow the intended use. Live-provider receipt and public deployment are not established by the fake-provider tests.
 
 ## Phase 9 status and remaining work
 
