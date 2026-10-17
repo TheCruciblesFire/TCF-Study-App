@@ -100,11 +100,6 @@ function blbPassageUrl(value) {
   url.pathname = url.pathname.replace(/^\/kjv\//i, '/csb/');
   return url.href;
 }
-function blbVerseToolsUrl(value) {
-  const url = new URL(blbPassageUrl(value));
-  url.pathname = `/verse${url.pathname}`;
-  return url.href;
-}
 function sourceCard(source, turnId) {
   const details = el('details', 'source-card'); details.id = `${turnId}-${source.id}`;
   const summary = el('summary'); summary.append(el('strong', '', `${source.reference} · ${source.translation}`), el('span', 'source-tag', source.role.toUpperCase()));
@@ -149,16 +144,18 @@ function renderAnswer(answer, mount, turnId) {
     window.fums('trackView', [...answer.sources.map(source => source.fumsToken), answer.csbPassage?.fumsToken].filter(Boolean));
   }
   card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'WEB-TEXT STUDY'}`), el('h2', '', answer.study.title));
+  try {
+    const studyMore = el('p', 'study-more');
+    const link = el('a', 'source-link', 'Study this passage further in Blue Letter Bible (CSB) ↗');
+    link.href = blbPassageUrl(answer.sources[0].url); link.target = '_blank'; link.rel = 'noopener noreferrer';
+    studyMore.append(link, el('span', 'source-disclosure', ' On BLB, open Tools beside a verse for commentaries and language resources.'));
+    card.append(studyMore);
+  } catch { /* Keep the study available if its external passage URL is invalid. */ }
   if (answer.csbPassage) {
     const passage = answer.csbPassage;
     const reading = el('section', 'csb-reading');
     reading.append(el('h3', '', `${passage.reference} · Christian Standard Bible`),
       el('p', 'scripture-text', passage.text), el('p', 'copyright', passage.copyright));
-    const handoff = el('a', 'source-link', 'Study this passage further in Blue Letter Bible (CSB) ↗');
-    try {
-      handoff.href = blbPassageUrl(passage.url); handoff.target = '_blank'; handoff.rel = 'noopener noreferrer';
-      reading.append(handoff);
-    } catch { /* Keep the CSB reading available if the external URL is invalid. */ }
     reading.append(el('p', 'source-disclosure', 'CSB is displayed for reading. The AI study below uses the public-domain World English Bible (WEB).'));
     card.append(reading);
   }
@@ -206,15 +203,6 @@ function renderAnswer(answer, mount, turnId) {
     } catch { /* The attributed note remains available without the external link. */ }
     card.append(section);
   }
-  try {
-    const main = answer.sources[0];
-    const commentary = el('section', 'answer-section blb-commentary-handoff');
-    commentary.append(el('h3', '', 'Study this passage with BLB commentaries'));
-    const link = el('a', 'source-link', `Explore commentaries for ${main.reference} ↗`);
-    link.href = blbVerseToolsUrl(main.url); link.target = '_blank'; link.rel = 'noopener noreferrer';
-    commentary.append(link, el('p', 'source-disclosure', 'This opens the first verse in Blue Letter Bible’s tools. Choose Commentaries to browse the available text resources. BLB commentaries were not used to generate this answer.'));
-    card.append(commentary);
-  } catch { /* The study remains available if the external handoff URL is invalid. */ }
   const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
   const list = el('ul'); for (const question of answer.study.furtherStudy) list.append(el('li', '', question)); further.append(list); card.append(further);
   if (answer.study.caveat) card.append(el('p', 'study-caveat', answer.study.caveat));
