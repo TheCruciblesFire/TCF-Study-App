@@ -1,7 +1,7 @@
 # TCF Study App — V1 deployment and acceptance record
 Date: 2026-10-15. Evidence: operator-reported live tests and repository configuration; not an independent production penetration test or full theological audit.
 
-For the subsequent independent read-only availability checks and automated release validation, see the [October 16 release-readiness record](release-readiness-2026-10-16.md). The historical observations below do not replace its outstanding release gates.
+For the subsequent independent read-only availability checks and automated release validation, see the [October 16 release-readiness record](release-readiness-2026-10-16.md). For the deployed WEB implementation and operator-reported acceptance, see the [current release status](release-status-2026-10-16-web.md). The CSB flow and licensing hold below are historical; they do not describe the current WEB-to-OpenAI path.
 
 ## Running system
 - Repository: https://github.com/TheCruciblesFire/TCF-Study-App
