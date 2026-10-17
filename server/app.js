@@ -14,6 +14,7 @@ import { parseReference } from './references.js';
 import { getCommentaryPilot } from './commentary-pilot.js';
 import { AppError } from './errors.js';
 import { loadLexicalIndexes, lookupStrong, searchEnglishGloss } from './strong-lookup.js';
+import { buildLexicalStudyPacket } from './lexical-study-packet.js';
 
 export function createApp(config, overrides = {}) {
   const app = express();
@@ -215,6 +216,12 @@ export function createApp(config, overrides = {}) {
              ...(config.APP_MODE === 'live' && config.COMMENTARY_PILOT_ENABLED && study.commentaryInsight
                ? { commentaryPilot: getCommentaryPilot(sources[0].reference) } : {}),
             ...(route.key ? { demoKey: route.key } : {}) };
+      // Optional reviewed research packet. Never infer a word occurrence from a dictionary alone.
+      // Until a separately reviewed tagged index and approvals are supplied, returns no lexical assertions.
+      if (result.workflow.supported && overrides.reviewedVerseIndex && overrides.verseApprovals && lexicalIndexes) {
+        answer.lexicalPacket = buildLexicalStudyPacket(route.main, overrides.reviewedVerseIndex,
+          overrides.verseApprovals, lexicalIndexes);
+      }
       // Analytics tokens belong only in the immediate response, never stored in history.
       const retained = structuredClone(answer);
       // Licensed CSB display text and its FUMS token are response-only.
