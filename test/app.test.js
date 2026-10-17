@@ -157,7 +157,7 @@ test('pilot insight and its source links reach the chat response', async t => {
   assert.equal(answer.commentaryPilot.blbUrl, 'https://www.blueletterbible.org/csb/jhn/15/4/');
   assert.equal(answer.csbPassage.text, 'CSB LICENSED DISPLAY SENTINEL');
   assert.equal(answer.csbPassage.fumsToken, 'csb-test-token');
-  assert.doesNotMatch(JSON.stringify(store.get(sessionToken)), /CSB LICENSED DISPLAY SENTINEL|csb-test-token/);
+  assert.doesNotMatch(JSON.stringify(store.session(sessionToken, false).history), /CSB LICENSED DISPLAY SENTINEL|csb-test-token/);
 });
 
 test('follow-up routing sends prior questions and references without study prose or passage text', async () => {
