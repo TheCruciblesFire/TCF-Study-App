@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { createStore } from './store.js';
 import { createDemoProviders } from './demo.js';
-import { createLiveProviders, validateStudy, explainSources } from './providers.js';
+import { createLiveProviders, validateStudy, validateCommentaryInsight, explainSources } from './providers.js';
 import { parseReference } from './references.js';
 import { getCommentaryPilot } from './commentary-pilot.js';
 import { AppError } from './errors.js';
@@ -192,7 +192,11 @@ export function createApp(config, overrides = {}) {
           }
           return sources;
         },
-        verifyStudy: (data, sources) => validateStudy(data, sources),
+        verifyStudy: (data, sources) => {
+          const verified = validateStudy(data, sources);
+          const note = config.APP_MODE === 'live' && config.COMMENTARY_PILOT_ENABLED && getCommentaryPilot(sources[0].reference);
+          return note ? { ...verified, commentaryInsight: validateCommentaryInsight(data.commentaryInsight, note, sources) } : verified;
+        },
       });
       const { route, sources, study } = result;
       const answer = !result.workflow.supported
