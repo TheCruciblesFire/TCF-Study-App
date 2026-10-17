@@ -264,10 +264,8 @@ def main() -> None:
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps({
         "status": report["status"],
-        "greek": {"records": greek["sourceWordRecords"], **report["greek"]["coverage"],
-                  "excluded": greek["excludedRowsByReason"]},
-        "hebrew": {"records": hebrew["sourceWordRecords"], **report["hebrew"]["coverage"],
-                   "excluded": hebrew["excludedRowsByReason"]},
+        "greek": report["greek"],
+        "hebrew": report["hebrew"],
     }, indent=2))
 
 
