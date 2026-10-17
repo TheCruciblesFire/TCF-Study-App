@@ -57,7 +57,7 @@ Copy `.env.example` to `.env` locally, or use your host’s secret manager. Neve
 | `APP_MODE=live` | Enables OpenAI and API.Bible; fails startup if credentials or Bible ID are absent. |
 | `TCF_OPENAI_API_KEY` | Server-only OpenAI project key for `api.openai.com`. |
 | `TCF_BIBLE_API_KEY` | Server-only API.Bible key for `rest.api.bible`. |
-| `BIBLE_ID` | Translation ID authorized by your API.Bible account for this public web application. Find it through the authenticated `/v1/bibles` endpoint/account. |
+| `BIBLE_ID` | Use `9879dbb7cfe39e4d-01`, API.Bible’s public-domain World English Bible (WEB) ID. Confirm the key can access it through the authenticated `/v1/bibles` endpoint. Live AI study fails closed for any other ID. |
 | `PUBLIC_ORIGIN` | Exact public HTTPS origin of this application, e.g. `https://study.your-domain.org`; no trailing slash. Browser requests originate in the iframe, not on the SnapPages parent. |
 | `EMBED_ORIGINS` | Space-separated exact HTTPS origins of the SnapPages website allowed to frame it. Use your actual domains. Defaults are examples, not verified TCF domain ownership. |
 | `DATA_DIR` | Persistent writable directory for SQLite and the visitor-hashing key; defaults to `.data`. |

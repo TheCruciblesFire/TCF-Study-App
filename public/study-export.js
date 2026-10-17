@@ -1,4 +1,4 @@
-// Study-note export deliberately omits licensed Scripture text, FUMS tokens,
+// Study-note export deliberately omits the full Scripture text, FUMS tokens,
 // session identifiers and links. This is an outline for personal review.
 export function formatStudyNotes(answer) {
   if (!answer?.study || !Array.isArray(answer.sources) || !answer.sources.length) {
@@ -16,7 +16,7 @@ export function formatStudyNotes(answer) {
     [referenceOnly ? 'Consider a response' : 'Put it into practice', study.application],
   ];
   const lines = ['TCF BIBLE STUDY ASSISTANT', study.title, 'Main passage: ' + answer.sources[0].reference,
-    ...(referenceOnly ? ['AI received references and the question, not the Scripture text. Check every prompt against the passage.'] : []), ''];
+    ...(referenceOnly ? ['AI received references and the question, not the Scripture text. Check every prompt against the passage.'] : answer.grounding === 'web_text' ? ['AI received the public-domain WEB passage text. Verify the study against the displayed passage.'] : []), ''];
   for (const [heading, items] of sections) {
     if (!items?.length) continue;
     lines.push(heading);

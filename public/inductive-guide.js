@@ -16,7 +16,8 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {},
   };
   const root = el('section', 'inductive-guide');
   root.setAttribute('aria-label', 'Guided inductive Bible study');
-  const intro = el('p', 'inductive-guide-intro', 'Work through the displayed Scripture yourself with Observe → Interpret → Apply. Your notes stay in this browser tab. AI feedback is unavailable in this version.');
+  const intro = el('p', 'inductive-guide-intro', 'Work through the displayed Scripture yourself with Observe → Interpret → Apply. ' +
+    (requestFeedback ? 'Your notes stay in this browser tab unless you choose an AI feedback button; then your notes and the WEB passage are sent to OpenAI.' : 'Your notes stay in this browser tab. AI feedback is unavailable in this version.'));
   const start = el('button', 'inductive-guide-start', 'Start guided study');
   start.type = 'button';
   root.append(el('h3', '', 'Study the passage step by step'), intro, start);
@@ -31,7 +32,7 @@ export function createInductiveGuide({ sections, reference, onStatus = () => {},
     working.replaceChildren();
     if (stage === 3) {
       allSections.forEach(section => { section.hidden = false; });
-      working.append(el('h4', '', 'Guided study complete'), el('p', '', 'Your observations, interpretation, and application are your own reflections. Compare them with the displayed Scripture and study notes; they have not been evaluated or verified.'));
+      working.append(el('h4', '', 'Guided study complete'), el('p', '', 'Your observations, interpretation, and application are your own reflections. Compare them with the displayed Scripture and study notes; any AI feedback is a suggestion, not a verified assessment.'));
       const copy = el('button', 'inductive-guide-next', 'Copy my reflection notes'); copy.type = 'button';
       copy.addEventListener('click', async () => {
         const output = [reference, ...INDUCTIVE_STAGES.map((item,i) => item.title + '\n' + (notes[i] || '(No notes recorded)'))].join('\n\n');

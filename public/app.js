@@ -136,7 +136,7 @@ function renderAnswer(answer, mount, turnId) {
   if (answer.mode === 'live' && reportingReady) {
     window.fums('trackView', answer.sources.map(source => source.fumsToken).filter(Boolean));
   }
-  card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'REFERENCE-GUIDED STUDY'}`), el('h2', '', answer.study.title));
+  card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'WEB-TEXT STUDY'}`), el('h2', '', answer.study.title));
   const sections = [['Passage & context', [answer.study.context]], ['Observe the text', answer.study.observations], ['Understand in context', answer.study.interpretation], ['Theological conclusions', answer.study.theology], ['Christ & the wider story', answer.study.connections], ['Put it into practice', answer.study.application]];
   const guidedSections = [[], [], []];
   for (const [heading, items] of sections) {
@@ -152,9 +152,9 @@ function renderAnswer(answer, mount, turnId) {
     if (group >= 0) guidedSections[group].push(section);
   }
   const guide = createInductiveGuide({ sections: guidedSections, reference: answer.sources[0].reference, onStatus: announce, autoStart: studyMode === 'guided',
-    requestFeedback: null,
-    requestInterpretationFeedback: null,
-    requestApplicationFeedback: null });
+    requestFeedback: answer.mode === 'live' ? (reference, notes) => request('/api/study/observation-feedback', { reference, notes }) : null,
+    requestInterpretationFeedback: answer.mode === 'live' ? (reference, notes) => request('/api/study/interpretation-feedback', { reference, notes }) : null,
+    requestApplicationFeedback: answer.mode === 'live' ? (reference, notes) => request('/api/study/application-feedback', { reference, notes }) : null });
   const contextSection = card.querySelector('.answer-section');
   card.insertBefore(guide, contextSection);
   const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
@@ -162,7 +162,7 @@ function renderAnswer(answer, mount, turnId) {
   if (answer.study.caveat) card.append(el('p', 'study-caveat', answer.study.caveat));
   const sources = el('div', 'source-list'); sources.append(el('h3', '', 'READ THE SCRIPTURE · VERIFIED SOURCE SET'));
   for (const source of answer.sources) sources.append(sourceCard(source, turnId));
-  sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : 'The CSB passage is displayed from API.Bible. AI receives only your question and passage references; it has not read or verified the displayed Scripture. Treat these items as reading prompts and check every suggestion against the passage. Linked resources were not consulted.'));
+  sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : 'The public-domain WEB passage is displayed from API.Bible and supplied to the AI for this study. Verify every explanation against the displayed passage. Linked resources were not consulted.'));
   if (answer.mode === 'live') {
     const attribution = el('p', 'source-disclosure', 'Scripture provided by ');
     const link = el('a', 'source-link', 'API.Bible');
@@ -177,7 +177,7 @@ function renderAnswer(answer, mount, turnId) {
     try {
       await navigator.clipboard.writeText(formatStudyNotes(answer));
       copy.textContent = 'Notes copied';
-      announce('Study notes copied without licensed Scripture text.');
+      announce('Study notes copied without full Scripture text.');
     } catch {
       announce('Copy was blocked by your browser. You can still review the study on this page.', true);
     }
@@ -255,7 +255,7 @@ function openInfo(title, paragraphs) {
 $('#about-button').addEventListener('click', () => openInfo('The text leads.', [
   'Our study approach adapts the KV Study Engine 3.0.1: observe the passage, interpret in context, distinguish theological synthesis, and then consider faithful application.',
   'The first version supports passage studies and basic biblical questions. Christological and canonical connections belong only where the source passages support them. Original-language and comprehensive commentary research are not included.',
-  'The configured licensed Bible translation controls the quotations. Demo mode uses public-domain KJV examples. This app adapts the methodology; it does not run the ChatGPT plugin.',
+  'Live mode uses public-domain World English Bible (WEB) passages from API.Bible. Demo mode uses public-domain KJV examples. This app adapts the methodology; it does not run the ChatGPT plugin.',
 ]));
 $('#privacy-button').addEventListener('click', () => openInfo('Study with care.', config?.preview ? [
   'This is a self-contained offline demo with three prepared studies. Questions and temporary conversation history stay in this page’s memory. No server, API calls, cookies, or local storage are used. Closing or reloading the file clears the conversation.',
@@ -263,9 +263,9 @@ $('#privacy-button').addEventListener('click', () => openInfo('Study with care.'
   'The hosted app requires a separate backend and authorized API credentials for live studies. Never put API keys in this demo or in SnapPages.',
 ] : [
   'No visitor account is required, and this app sets no cookies. A temporary session token stays in this page’s memory. Reloading starts a new conversation. Up to six study exchanges are held on the server for 24 hours after your last successful study, with expired conversations removed on the next request.',
-  'In live mode, your question and recent questions and passage references are sent to OpenAI. API.Bible supplies the CSB text for display in this app; that text is not included in the AI request. Guided Study notes stay in this browser tab, and AI feedback is unavailable. API.Bible’s required FUMS script uses browser local/session storage for device and session identifiers and reports Scripture usage. Provider privacy and retention terms apply. Do not share sensitive personal information.',
+  'In live mode, your question, recent questions and passage references, and the retrieved public-domain WEB text are sent to OpenAI. Guided Study notes stay in this browser tab unless you choose an AI feedback button; then those notes and the controlling WEB passage are sent to OpenAI. API.Bible’s required FUMS script uses browser local/session storage for device and session identifiers and reports Scripture usage. Provider privacy and retention terms apply. Do not share sensitive personal information.',
   'New study clears the current server conversation. Cost records contain token counts and estimated costs, not conversation text. A keyed hash of your IP address is used temporarily to enforce usage limits.',
-  'AI can make mistakes and has not inspected the displayed CSB text. A real reference does not verify a suggested interpretation. Read the Scripture sources, consider context, and seek trusted pastoral guidance when needed. This assistant is not an emergency or professional counseling service.',
+  'AI can make mistakes even when given the displayed WEB text. A real reference does not verify a suggested interpretation. Read the Scripture sources, consider context, and seek trusted pastoral guidance when needed. This assistant is not an emergency or professional counseling service.',
 ]));
 dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
