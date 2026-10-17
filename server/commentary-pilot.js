@@ -12,6 +12,7 @@ const notes = [
     verse: 4,
     text: 'The repeated call to remain in Christ describes a disciple’s continuing dependence on him, like a branch joined to a vine.',
     keywords: ['remain', 'vine'],
+    sourceViewUrl: 'https://bible-strong.app/commentary/en/aquifer-fr/john/15',
   },
   {
     id: 'TOSN-PSA-23-1',
@@ -21,6 +22,7 @@ const notes = [
     verse: 1,
     text: 'The psalm uses shepherd imagery for the Lord’s personal care. In the ancient Near East, rulers were also described as shepherds.',
     keywords: ['shepherd', 'need'],
+    sourceViewUrl: 'https://bible-strong.app/commentary/en/aquifer-fr/ps/23',
   },
 ];
 
@@ -41,5 +43,6 @@ export function getCommentaryPilot(reference) {
   if (!note) return null;
   const verse = parseReference(note.reference);
   return { id: note.id, reference: note.reference, text: note.text, keywords: [...note.keywords],
-    blbUrl: verse.url.replace('/kjv/', '/csb/'), blbTranslation: 'CSB', ...COMMENTARY_PILOT_SOURCE };
+    blbUrl: verse.url.replace('/kjv/', '/csb/'), blbTranslation: 'CSB',
+    sourceViewUrl: note.sourceViewUrl, ...COMMENTARY_PILOT_SOURCE };
 }
