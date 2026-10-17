@@ -1,6 +1,6 @@
 # Resume work on another machine
 
-Handoff recorded October 16, 2026. Code baseline: `6f2f67c6c06aa2c9c0b3faef8b19188d64b68de6` (merged PR #69). Fetch current `main` before starting: this is a dated checkpoint, not a promise that the repository or deployed service is unchanged.
+Handoff recorded October 16, 2026. Code baseline: `6f2f67c6c06aa2c9c0b3faef8b19188d64b68de6` (merged PR #69). This is a historical checkpoint. For the WEB deployment at PR #72, operator-reported live acceptance, connected Render configuration, and the remaining Phase 9A gate, read the [current release status](release-status-2026-10-16-web.md). Fetch current `main` before starting.
 
 ## Start here
 
@@ -11,7 +11,7 @@ Read these files in order:
 3. [Phase 9 roadmap](phase9-roadmap.md).
 4. [Consolidated plan and Phase 9A hard exit criteria](phase9-consolidated-delivery-and-exit.md).
 
-The next work is release acceptance and obtaining missing access/review evidence. Do not restart the architecture, add another generic Phase 9A validator, or assume lexical integration is ready.
+Release acceptance and Render access described below were subsequently addressed; the current work is Phase 9A independent review. Do not restart the architecture, add another generic Phase 9A validator, or assume lexical integration is ready.
 
 ## What is already on GitHub
 
@@ -51,6 +51,8 @@ For implementation, create a narrowly scoped branch from refreshed `origin/main`
 Demo mode works without credentials. `npm start` defaults to demo when no live configuration is supplied. Do not copy production credentials into repository files or chat. Existing production secrets and SQLite data belong to the Render service, not the old development machine. Reconnect GitHub, Render, and Google Drive as needed; connection availability must be verified in the new session.
 
 ## Pick up the unfinished work
+
+The table below records the state at PR #69; use the [current release status](release-status-2026-10-16-web.md) for resolved gates and current deployment facts.
 
 | Gate | Last known state | Next action |
 |---|---|---|
