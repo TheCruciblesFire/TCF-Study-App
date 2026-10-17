@@ -235,6 +235,49 @@ def coverage(primary: set[str], witness: set[str], lexicon: set[str], meaning: s
     }
 
 
+
+def review_examples(raw: dict[str, bytes], step_g_ids: set[str],
+                    step_h_ids: set[str]) -> dict:
+    """Small occurrence/lexicon sample for human review, never runtime approval."""
+    greek_target = {"G3306", "G2814", "G2590"}
+    hebrew_target = {"H3068", "H7462", "H3808", "H2637"}
+    greek = []
+    for node in ET.fromstring(raw["macula_john"]).iter():
+        if local_tag(node) != "w" or not re.fullmatch(r"JHN 15:4![1-9][0-9]*", node.get("ref", "")):
+            continue
+        strong = basic_id(node.get("strong", ""), "G")
+        if strong in greek_target:
+            greek.append({"ref": node.get("ref"), "surface": (node.text or "").strip(),
+                          "lemma": node.get("lemma"), "morph": node.get("morph"),
+                          "strong": strong, "stepIdOverlap": strong in step_g_ids})
+    hebrew = []
+    for node in ET.fromstring(raw["oshb_psalms"]).iter():
+        if local_tag(node) != "verse" or node.get("osisID") != "Ps.23.1":
+            continue
+        for word in node.iter():
+            if local_tag(word) != "w":
+                continue
+            lemma = word.get("lemma", "")
+            strong = basic_id(lemma, "H")
+            hebrew.append({"surface": (word.text or "").strip(), "lemmaField": lemma,
+                           "morph": word.get("morph"), "strong": strong,
+                           "stepIdOverlap": strong in step_h_ids if strong else False,
+                           "strictlyEligible": strong in hebrew_target if strong else False})
+    lexicons = {}
+    for language, key, targets in [("G", "step_greek_lexicon", greek_target),
+                                   ("H", "step_hebrew_lexicon", hebrew_target)]:
+        for line in raw[key].decode("utf-8-sig").splitlines():
+            fields = line.split("\t")
+            if len(fields) < 8 or not re.fullmatch(language + r"[0-9]{4}", fields[0]):
+                continue
+            strong = basic_id(fields[0][1:].lstrip("0"), language)
+            if strong in targets:
+                lexicons.setdefault(strong, []).append({
+                    "disambiguated": fields[1], "lemma": fields[3],
+                    "gloss": fields[6], "meaning": fields[7]})
+    return {"greek": greek, "hebrew": hebrew, "lexiconRows": lexicons}
+
+
 def main() -> None:
     output = Path(sys.argv[1] if len(sys.argv) > 1 else "phase9a-pilot-report.json")
     downloaded = {name: download(name) for name in SOURCES}
@@ -266,6 +309,7 @@ def main() -> None:
         "status": report["status"],
         "greek": report["greek"],
         "hebrew": report["hebrew"],
+        "reviewExamples": review_examples(raw, step_g_ids, step_h_ids),
     }, indent=2))
 
 
