@@ -1,5 +1,4 @@
 import { formatStudyNotes } from './study-export.js';
-import { createInductiveGuide } from './inductive-guide.js';
 const $ = selector => document.querySelector(selector);
 const form = $('#chat-form'), input = $('#question'), sendButton = $('#send-button');
 const conversation = $('#conversation'), welcome = $('#welcome'), status = $('#request-status');
@@ -7,17 +6,15 @@ let config, busy = false;
 let nextTurnId = 0;
 let studyMode = 'explore';
 function setStudyMode(mode) {
-  studyMode = ['guided', 'blb'].includes(mode) ? mode : 'explore';
+  studyMode = mode === 'blb' ? 'blb' : 'explore';
   document.querySelectorAll('[data-study-mode]').forEach(button => { button.setAttribute('aria-pressed', String(button.dataset.studyMode === studyMode)); });
   $('#study-mode-description').textContent = studyMode === 'blb'
     ? 'Search Blue Letter Bible directly. Results open on blueletterbible.org in a new tab.'
-    : studyMode === 'guided'
-      ? 'Enter a Scripture passage to begin guided Observation → Interpretation → Application. Your reflections remain in this browser tab.'
-      : 'Ask a biblical question or enter a passage below.';
+    : 'Ask a biblical question or enter a passage below.';
   $('#blb-gateway').hidden = studyMode !== 'blb';
   document.querySelectorAll('.starter-heading, .starter-grid, .welcome-caption').forEach(node => { node.hidden = studyMode === 'blb'; });
   document.querySelector('.composer-wrap').hidden = studyMode === 'blb';
-  input.placeholder = studyMode === 'guided' ? 'Enter a passage, e.g. John 15:1–8…' : 'Enter a passage or ask a biblical question…';
+  input.placeholder = 'Enter a passage or ask a biblical question…';
 }
 
 const el = (tag, className, text) => {
@@ -90,7 +87,13 @@ function loadBibleReporting() {
   });
   return reportingPromise;
 }
-function sourceCard(source, turnId) {
+function blbSearchUrl(criteria, translation = 'CSB') {
+  const url = new URL('https://www.blueletterbible.org/search/search.cfm');
+  url.searchParams.set('Criteria', criteria);
+  url.searchParams.set('t', translation);
+  return url.href;
+}
+function sourceCard(source, turnId, csbDisplayed = false) {
   const details = el('details', 'source-card'); details.id = `${turnId}-${source.id}`;
   const summary = el('summary'); summary.append(el('strong', '', `${source.reference} · ${source.translation}`), el('span', 'source-tag', source.role.toUpperCase()));
   const content = el('div', 'source-content');
@@ -101,8 +104,8 @@ function sourceCard(source, turnId) {
   try {
     const url = new URL(source.url);
     if (url.protocol === 'https:' && url.hostname === 'www.blueletterbible.org') {
-      const link = el('a', 'source-link', 'Continue on Blue Letter Bible (KJV) ↗');
-      link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
+      const link = el('a', 'source-link', `Continue on Blue Letter Bible (${csbDisplayed ? 'CSB' : 'KJV'}) ↗`);
+      link.href = csbDisplayed ? blbSearchUrl(source.reference) : url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
     }
   } catch { /* Source text remains available if its external link is invalid. */ }
   details.append(summary, content); return details;
@@ -134,11 +137,20 @@ function renderAnswer(answer, mount, turnId) {
   const card = el('div', 'answer-card'); mount.append(label, card);
   if (!answer.study) { card.append(el('p', 'answer-message', answer.message)); return; }
   if (answer.mode === 'live' && reportingReady) {
-    window.fums('trackView', answer.sources.map(source => source.fumsToken).filter(Boolean));
+    window.fums('trackView', [...answer.sources.map(source => source.fumsToken), answer.csbPassage?.fumsToken].filter(Boolean));
   }
   card.append(el('p', 'answer-meta', `${answer.sources[0].reference} · ${answer.mode === 'demo' ? 'CURATED DEMO' : 'WEB-TEXT STUDY'}`), el('h2', '', answer.study.title));
+  if (answer.csbPassage) {
+    const passage = answer.csbPassage;
+    const reading = el('section', 'csb-reading');
+    reading.append(el('h3', '', `${passage.reference} · Christian Standard Bible`),
+      el('p', 'scripture-text', passage.text), el('p', 'copyright', passage.copyright));
+    const handoff = el('a', 'source-link', 'Study this passage further in Blue Letter Bible (CSB) ↗');
+    handoff.href = blbSearchUrl(passage.reference); handoff.target = '_blank'; handoff.rel = 'noopener noreferrer';
+    reading.append(handoff, el('p', 'source-disclosure', 'CSB is displayed for reading. The AI study below uses the public-domain World English Bible (WEB).'));
+    card.append(reading);
+  }
   const sections = [['Passage & context', [answer.study.context]], ['Observe the text', answer.study.observations], ['Understand in context', answer.study.interpretation], ['Theological conclusions', answer.study.theology], ['Christ & the wider story', answer.study.connections], ['Put it into practice', answer.study.application]];
-  const guidedSections = [[], [], []];
   for (const [heading, items] of sections) {
     if (!items.length) continue;
     const section = el('section', 'answer-section');
@@ -146,17 +158,7 @@ function renderAnswer(answer, mount, turnId) {
     section.append(el('h3', '', answer.grounding === 'reference_only' ? liveHeading[heading] : heading));
     for (const item of items) section.append(paragraphWithEvidence(item, answer.sources, turnId));
     card.append(section);
-    const group = heading === 'Observe the text' ? 0 :
-      ['Understand in context', 'Theological conclusions', 'Christ & the wider story'].includes(heading) ? 1 :
-      heading === 'Put it into practice' ? 2 : -1;
-    if (group >= 0) guidedSections[group].push(section);
   }
-  const guide = createInductiveGuide({ sections: guidedSections, reference: answer.sources[0].reference, onStatus: announce, autoStart: studyMode === 'guided',
-    requestFeedback: answer.mode === 'live' ? (reference, notes) => request('/api/study/observation-feedback', { reference, notes }) : null,
-    requestInterpretationFeedback: answer.mode === 'live' ? (reference, notes) => request('/api/study/interpretation-feedback', { reference, notes }) : null,
-    requestApplicationFeedback: answer.mode === 'live' ? (reference, notes) => request('/api/study/application-feedback', { reference, notes }) : null });
-  const contextSection = card.querySelector('.answer-section');
-  card.insertBefore(guide, contextSection);
   if (answer.commentaryPilot && answer.study.commentaryInsight?.noteId === answer.commentaryPilot.id) {
     const note = answer.commentaryPilot;
     const section = el('section', 'answer-section commentary-pilot');
@@ -178,11 +180,11 @@ function renderAnswer(answer, mount, turnId) {
         note.keywords.slice(0, 3).forEach((word, index) => {
           if (index) deepDive.append(document.createTextNode(' · '));
           const link = el('a', 'source-link', word);
-          link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+          link.href = blbSearchUrl(word); link.target = '_blank'; link.rel = 'noopener noreferrer';
           link.setAttribute('aria-label', 'Explore ' + word + ' in ' + note.reference + ' on Blue Letter Bible');
           deepDive.append(link);
         });
-        section.append(deepDive, el('p', 'source-disclosure', 'Links open the verse in BLB’s KJV view. Select Tools there for language study; these English words are not verified Strong’s entries.'));
+        section.append(deepDive, el('p', 'source-disclosure', 'Each word opens a CSB word search on BLB. Select a matching verse and its Tools for language study; these English words are not verified Strong’s entries.'));
       }
     } catch { /* The attributed note remains available without the external link. */ }
     card.append(section);
@@ -191,8 +193,8 @@ function renderAnswer(answer, mount, turnId) {
   const list = el('ul'); for (const question of answer.study.furtherStudy) list.append(el('li', '', question)); further.append(list); card.append(further);
   if (answer.study.caveat) card.append(el('p', 'study-caveat', answer.study.caveat));
   const sources = el('div', 'source-list'); sources.append(el('h3', '', 'READ THE SCRIPTURE · VERIFIED SOURCE SET'));
-  for (const source of answer.sources) sources.append(sourceCard(source, turnId));
-  sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : answer.commentaryPilot ? 'The public-domain WEB passage is displayed from API.Bible and supplied to the AI. An attributed study-note summary also informed the labeled insight above. Verify both against the passage; linked BLB resources were not consulted.' : 'The public-domain WEB passage is displayed from API.Bible and supplied to the AI for this study. Verify every explanation against the displayed passage. Linked resources were not consulted.'));
+  for (const source of answer.sources) sources.append(sourceCard(source, turnId, Boolean(answer.csbPassage)));
+  sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : answer.csbPassage ? 'The CSB passage above is displayed from API.Bible but is not sent to OpenAI or copied into study notes. The public-domain WEB passage below is supplied to the AI. An attributed study-note summary informs the labeled insight. Blue Letter Bible was not consulted by the AI.' : 'The public-domain WEB passage is displayed from API.Bible and supplied to the AI for this study. Verify every explanation against the displayed passage. Linked resources were not consulted.'));
   if (answer.mode === 'live') {
     const attribution = el('p', 'source-disclosure', 'Scripture provided by ');
     const link = el('a', 'source-link', 'API.Bible');
@@ -285,7 +287,7 @@ function openInfo(title, paragraphs) {
 $('#about-button').addEventListener('click', () => openInfo('The text leads.', [
   'Our study approach adapts the KV Study Engine 3.0.1: observe the passage, interpret in context, distinguish theological synthesis, and then consider faithful application.',
   'The first version supports passage studies and basic biblical questions. Christological and canonical connections belong only where the source passages support them. Original-language research and comprehensive commentary searches are not included. A small attributed study-note pilot may appear for selected passages.',
-  'Live mode uses public-domain World English Bible (WEB) passages from API.Bible. Demo mode uses public-domain KJV examples. This app adapts the methodology; it does not run the ChatGPT plugin.',
+  'For the two-passage pilot, live mode displays CSB from API.Bible and sends only public-domain WEB Scripture text to OpenAI. Demo mode uses public-domain KJV examples. This app adapts the methodology; it does not run the ChatGPT plugin.',
 ]));
 $('#privacy-button').addEventListener('click', () => openInfo('Study with care.', config?.preview ? [
   'This is a self-contained offline demo with three prepared studies. Questions and temporary conversation history stay in this page’s memory. No server, API calls, cookies, or local storage are used. Closing or reloading the file clears the conversation.',
@@ -293,7 +295,7 @@ $('#privacy-button').addEventListener('click', () => openInfo('Study with care.'
   'The hosted app requires a separate backend and authorized API credentials for live studies. Never put API keys in this demo or in SnapPages.',
 ] : [
   'No visitor account is required, and this app sets no cookies. A temporary session token stays in this page’s memory. Reloading starts a new conversation. Up to six study exchanges are held on the server for 24 hours after your last successful study, with expired conversations removed on the next request.',
-  'In live mode, your question, recent questions and passage references, and the retrieved public-domain WEB text are sent to OpenAI. In the limited commentary pilot, an attributed public study-note summary is also sent for selected passages. Guided Study notes stay in this browser tab unless you choose an AI feedback button; then those notes and the controlling WEB passage are sent to OpenAI. API.Bible’s required FUMS script uses browser local/session storage for device and session identifiers and reports Scripture usage. Provider privacy and retention terms apply. Do not share sensitive personal information.',
+  'In live mode, your question, recent questions and passage references, and the retrieved public-domain WEB text are sent to OpenAI. In the limited commentary pilot, an attributed public study-note summary is also sent for selected passages. The pilot CSB passage is displayed for reading only and is not sent to OpenAI or included in copied notes. Blue Letter Bible receives a chosen word or passage reference only when you open its link. API.Bible’s required FUMS script uses browser local/session storage for device and session identifiers and reports Scripture usage. Provider privacy and retention terms apply. Do not share sensitive personal information.',
   'New study clears the current server conversation. Cost records contain token counts and estimated costs, not conversation text. A keyed hash of your IP address is used temporarily to enforce usage limits.',
   'AI can make mistakes even when given the displayed WEB text. A real reference does not verify a suggested interpretation. Read the Scripture sources, consider context, and seek trusted pastoral guidance when needed. This assistant is not an emergency or professional counseling service.',
 ]));
