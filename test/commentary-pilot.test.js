@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getCommentaryPilot } from '../server/commentary-pilot.js';
-import { createLiveProviders, validateCommentaryInsight, WEB_BIBLE_ID } from '../server/providers.js';
+import { createLiveProviders, validateCommentaryInsight, WEB_BIBLE_ID, CSB_BIBLE_ID } from '../server/providers.js';
 import { loadConfig } from '../server/config.js';
 import { formatStudyNotes } from '../public/study-export.js';
 
@@ -25,8 +25,10 @@ test('pilot selects only the two bounded governing passages and uses BLB verse l
   assert.equal(john.id, 'TOSN-JHN-15-4');
   assert.equal(john.reference, 'John 15:4');
   assert.deepEqual(john.keywords, ['remain', 'vine']);
-  assert.equal(john.blbUrl, 'https://www.blueletterbible.org/kjv/jhn/15/4/');
+  assert.equal(john.blbUrl, 'https://www.blueletterbible.org/csb/jhn/15/4/');
   assert.equal(getCommentaryPilot('John 15:5'), null);
+  assert.equal(john.blbTranslation, 'CSB');
+  assert.deepEqual(getCommentaryPilot('Psalms 23').keywords, ['shepherd', 'need']);
   assert.equal(getCommentaryPilot('Psalms 23').id, 'TOSN-PSA-23-1');
   assert.equal(getCommentaryPilot('Psalms 23:2–4'), null);
   assert.equal(getCommentaryPilot('Romans 8:1'), null);
@@ -74,6 +76,7 @@ test('enabled pilot sends the bounded note to generation and returns an attribut
   assert.match(exported, /Adapted from Tyndale Open Study Notes/);
   assert.match(exported, /creativecommons\.org\/licenses\/by-sa\/4\.0/);
   assert.doesNotMatch(exported, /Remain in me, and I in you/);
+  assert.doesNotMatch(formatStudyNotes({ study: answer, sources: [source], csbPassage: { text: 'CSB LICENSED DISPLAY SENTINEL' } }), /CSB LICENSED DISPLAY SENTINEL/);
 });
 
 test('disabled pilot leaves the generation payload and response unchanged', async () => {
@@ -102,4 +105,20 @@ test('Render PR preview isolates origin, data, and spending from production sett
   assert.equal(config.DAILY_BUDGET_USD, 1);
   assert.equal(config.MONTHLY_BUDGET_USD, 2);
   assert.throws(() => loadConfig({ IS_PULL_REQUEST: 'true' }), /Render preview URL is required/);
+});
+
+test('CSB retrieval stays a separate display-only API.Bible call', async () => {
+  const requests = [];
+  const config = loadConfig({ APP_MODE: 'live', TCF_OPENAI_API_KEY: 'test-openai', TCF_BIBLE_API_KEY: 'test-bible', BIBLE_ID: WEB_BIBLE_ID });
+  const providers = createLiveProviders(config, async url => {
+    requests.push(url);
+    if (url.endsWith(`/bibles/${CSB_BIBLE_ID}`)) return Response.json({ data: { id: CSB_BIBLE_ID, abbreviation: 'CSB', copyright: '© CSB' } });
+    return Response.json({ data: { id: 'JHN.15.4', bibleId: CSB_BIBLE_ID, reference: 'John 15:4', content: 'Remain in me.', verseCount: 1 }, meta: { fumsToken: 'csb-token' } });
+  });
+  const passage = await providers.csb('John 15:4');
+  assert.equal(passage.translation, 'CSB');
+  assert.equal(passage.text, 'Remain in me.');
+  assert.equal(passage.fumsToken, 'csb-token');
+  assert.ok(requests.every(url => url.includes(CSB_BIBLE_ID)));
+  assert.equal(requests.length, 2);
 });
