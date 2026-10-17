@@ -159,7 +159,7 @@ try {
     delete node.dataset.scrolledTo;
     window.scrollTo(0, 0);
   });
-  await frame.getByRole('button', { name: /Read source: Psalm 23/ }).first().evaluate(node => node.click());
+  await frame.locator('.evidence-link').first().evaluate(node => node.click());
   await page.waitForFunction(() => {
     const node = document.querySelector('iframe');
     return Number(node.dataset.scrolledTo) > 0 && window.scrollY > 0;
