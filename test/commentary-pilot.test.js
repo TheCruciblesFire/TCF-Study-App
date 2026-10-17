@@ -59,7 +59,17 @@ test('enabled pilot sends the bounded note to generation and returns an attribut
   const answer = await providers.study({ question: 'Study John 15:4' }, [source], { cost: 0, input: 0, output: 0 });
   assert.equal(answer.commentaryInsight.noteId, 'TOSN-JHN-15-4');
   assert.equal(JSON.parse(request.messages[1].content).commentaryNote.id, 'TOSN-JHN-15-4');
-  assert.ok(request.response_format.json_schema.schema.properties.commentaryInsight);
+  const responseSchema = request.response_format.json_schema.schema;
+  assert.ok(responseSchema.properties.commentaryInsight);
+  const evidenceEnums = [];
+  function collectEvidenceEnums(node) {
+    if (!node || typeof node !== 'object') return;
+    if (node.properties?.evidence?.items?.enum) evidenceEnums.push(node.properties.evidence.items.enum);
+    for (const value of Object.values(node)) collectEvidenceEnums(value);
+  }
+  collectEvidenceEnums(responseSchema);
+  assert.ok(evidenceEnums.length > 0, 'the response schema constrains evidence IDs');
+  for (const values of evidenceEnums) assert.deepEqual(values, ['S1']);
   const exported = formatStudyNotes({ study: answer, sources: [source], commentaryPilot: getCommentaryPilot('John 15:4') });
   assert.match(exported, /Adapted from Tyndale Open Study Notes/);
   assert.match(exported, /creativecommons\.org\/licenses\/by-sa\/4\.0/);
