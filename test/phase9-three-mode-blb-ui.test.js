@@ -13,7 +13,7 @@ test('two accessible top-level approaches, original lookup UI absent',()=>{
  assert.doesNotMatch(js,/createInductiveGuide/);
 });
 test('BLB gateway preserves original GET search and selected translation independent of Bible API',()=>{
- assert.match(html,/action="https:\/\/www\.blueletterbible\.org\/search\/search\.cfm" method="get" target="_blank" rel="noopener noreferrer"/);
+ assert.match(html,/action="https:\/\/www\.blueletterbible\.org\/search\/search\.cfm" method="get" target="_top"/);
  assert.match(html,/name="Criteria"/);
  assert.match(html,/name="t"/);
  assert.match(html,/<option value="CSB" selected>/);
@@ -48,5 +48,5 @@ test('BLB search uses an explicit user-triggered navigation with stable params',
  assert.doesNotMatch(js,/handoff\.href = blbSearchUrl/);
  assert.match(js,/url\.searchParams\.set\('t',/);
  assert.match(js,/if \(range\) url\.searchParams\.set\('cscs', range\)/);
- assert.match(js,/window\.open\(url\.href, '_blank', 'noopener,noreferrer'\)/);
+ assert.match(js,/window\.top\.location\.href = url\.href/);
 });
