@@ -303,6 +303,17 @@ document.querySelectorAll('[data-new-study]').forEach(button => button.addEventL
   } catch (error) { announce(error.message, true); }
   finally { setBusy(false); input.focus({ preventScroll: true }); }
 }));
+// Embedded BLB links use the same top-page navigation as the working Deep Dive widget.
+if (window.parent !== window) {
+  document.addEventListener('click', event => {
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!link) return;
+    const url = new URL(link.href);
+    if (url.protocol !== 'https:' || url.hostname !== 'www.blueletterbible.org') return;
+    event.preventDefault();
+    window.top.location.href = url.href;
+  });
+}
 const dialog = $('#info-dialog');
 function openInfo(title, paragraphs) {
   $('#dialog-title').textContent = title;

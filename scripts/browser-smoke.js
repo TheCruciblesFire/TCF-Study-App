@@ -178,6 +178,9 @@ try {
   await frame.getByRole('heading', { name: 'Abiding in Christ', exact: true }).waitFor();
   const handoff = frame.getByRole('link', { name: 'Study this passage further in Blue Letter Bible (CSB) ↗' });
   assert.equal(await handoff.getAttribute('target'), '_top');
+  // Force the anchor fallback to stay inside the iframe; only the widget-style
+  // click handler can still navigate the parent page to BLB.
+  await handoff.evaluate(node => { node.target = '_self'; });
   await handoff.click();
   await page.waitForURL('https://www.blueletterbible.org/csb/jhn/15/1/');
   assert.equal(context.pages().length, 1);
