@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { createApp } from '../server/app.js';
 import { loadConfig } from '../server/config.js';
-import { createLiveProviders, validateStudy, validateRouteSources, explainSources } from '../server/providers.js';
+import { createLiveProviders, validateStudy, validateRouteSources, explainSources, WEB_BIBLE_ID } from '../server/providers.js';
 import { createStore } from '../server/store.js';
 import { createDemoProviders } from '../server/demo.js';
 
@@ -24,7 +24,7 @@ async function fixture(t, env = {}, overrides = {}) {
   });
   return { root, post, store, config, sessionToken };
 }
-const liveEnv = { APP_MODE: 'live', TCF_OPENAI_API_KEY: 'test-openai', TCF_BIBLE_API_KEY: 'test-bible', BIBLE_ID: 'licensed-test' };
+const liveEnv = { APP_MODE: 'live', TCF_OPENAI_API_KEY: 'test-openai', TCF_BIBLE_API_KEY: 'test-bible', BIBLE_ID: WEB_BIBLE_ID };
 
 test('complete passage study, server follow-up context, and reset', async t => {
   const { post } = await fixture(t);
@@ -115,26 +115,25 @@ test('live provider contract: route, authorized retrieval, generation, attributi
       return Response.json({ usage: { prompt_tokens: 1200, completion_tokens: 500 }, choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(data) } }] });
     }
     assert.equal(options.headers['api-key'], 'test-bible');
-      if (!url.includes('/passages/')) return Response.json({ data: { abbreviation: 'LICENSED', copyright: 'Copyright holder attribution', info: 'Required translation information' } });
+      if (!url.includes('/passages/')) return Response.json({ data: { id: WEB_BIBLE_ID, abbreviation: 'WEB', copyright: 'PUBLIC DOMAIN', info: 'World English Bible' } });
     const id = url.split('/passages/')[1].split('?')[0];
     const references = { 'JHN.15.1-JHN.15.8': 'John 15:1–8', 'JHN.14.21': 'John 14:21', 'GAL.5.22-GAL.5.23': 'Galatians 5:22–23' };
     const source = await demo.bible(references[id]);
-    return Response.json({ data: { id, bibleId: 'licensed-test', reference: source.reference, content: source.text, verseCount: source.verseCount, copyright: 'Copyright holder attribution' }, meta: { fumsToken: 'fake-test-token' } });
+    return Response.json({ data: { id, bibleId: WEB_BIBLE_ID, reference: source.reference, content: source.text, verseCount: source.verseCount, copyright: 'PUBLIC DOMAIN' }, meta: { fumsToken: 'fake-test-token' } });
   });
   const { post, store } = await fixture(t, liveEnv, { providers });
   const response = await post('John 15:1–8'); assert.equal(response.status, 200);
   const answer = await response.json(); assert.equal(answer.mode, 'live');
-  assert.equal(answer.sources[0].translation, 'LICENSED'); assert.equal(answer.sources[0].copyright, 'Copyright holder attribution');
-  assert.equal(answer.sources[0].info, 'Required translation information'); assert.equal(answer.sources[0].fumsToken, 'fake-test-token');
+  assert.equal(answer.sources[0].translation, 'WEB'); assert.equal(answer.sources[0].copyright, 'PUBLIC DOMAIN');
+  assert.equal(answer.sources[0].info, 'World English Bible'); assert.equal(answer.sources[0].fumsToken, 'fake-test-token');
   assert.equal(calls.length, 6); assert.equal(store.summary()[0].input_tokens, 2400);
   assert.ok(store.summary()[0].estimated_usd > 0);
   const generation = JSON.parse(calls.at(-1).options.body);
   assert.match(generation.messages[0].content, /KV Study Engine/);
-  assert.doesNotMatch(generation.messages[1].content, /I am the true vine/);
-  assert.deepEqual(JSON.parse(generation.messages[1].content).sources.map(source => Object.keys(source)), [['id', 'reference'], ['id', 'reference'], ['id', 'reference']]);
-  assert.equal(answer.grounding, 'reference_only');
-  assert.equal(answer.study.observations[0].strength, 'reading_prompt');
-  assert.match(answer.study.caveat, /did not inspect/);
+  assert.equal(JSON.parse(generation.messages[1].content).sources[0].text, answer.sources[0].text);
+  assert.deepEqual(JSON.parse(generation.messages[1].content).sources.map(source => Object.keys(source)), [['id', 'reference', 'text', 'translation'], ['id', 'reference', 'text', 'translation'], ['id', 'reference', 'text', 'translation']]);
+  assert.equal(answer.grounding, 'web_text');
+  assert.equal(answer.study.observations[0].strength, 'direct_text');
 });
 
 test('follow-up routing sends prior questions and references without study prose or passage text', async () => {
@@ -158,7 +157,7 @@ test('follow-up routing sends prior questions and references without study prose
     [{ question: 'Study John 15:1–8', main: 'John 15:1–8' }]);
 });
 
-test('live Guided Study feedback is unavailable without text-aware authorization', async t => {
+test('live Guided Study feedback requires a provider method', async t => {
   const { post } = await fixture(t, liveEnv, { providers: createDemoProviders() });
   assert.equal((await post('John 15:1–8')).status, 200);
   for (const stage of ['observation', 'interpretation', 'application']) {
@@ -236,8 +235,8 @@ test('Bible chapter endpoint preserves attribution and rejects mismatched or unr
   const calls = [];
   const providers = createLiveProviders(config, async (url) => {
     calls.push(url);
-    if (!url.includes('/chapters/')) return Response.json({ data: { abbreviation: 'KJV', copyright: 'Test attribution', info: 'Translation information' } });
-    return Response.json({ data: { id: 'PSA.23', bibleId: mismatch ? 'wrong-translation' : 'licensed-test', reference: 'Psalms 23', content: 'Test provider text', verseCount: 6 }, meta: omitToken ? {} : { fumsToken: 'test-only' } });
+    if (!url.includes('/chapters/')) return Response.json({ data: { id: WEB_BIBLE_ID, abbreviation: 'WEB', copyright: 'PUBLIC DOMAIN', info: 'Translation information' } });
+    return Response.json({ data: { id: 'PSA.23', bibleId: mismatch ? 'wrong-translation' : WEB_BIBLE_ID, reference: 'Psalms 23', content: 'Test provider text', verseCount: 6 }, meta: omitToken ? {} : { fumsToken: 'test-only' } });
   });
   const source = await providers.bible('Psalm 23');
   assert.equal(source.info, 'Translation information'); assert.ok(calls[1].includes('/chapters/PSA.23?'));
@@ -349,4 +348,52 @@ test('overlapping supporting references are omitted instead of rejecting 2 Timot
  assert.deepEqual(duplicate.supporting,[]);
  assert.throws(() => validateRouteSources({ kind:'passage', main:'2 Timothy 3:15',
   supporting:['not a Bible passage'] }), /invalid/i);
+});
+
+test('WEB safeguards reject stale licensed configuration and metadata before sending text', async () => {
+  const stale = createLiveProviders(loadConfig({ ...liveEnv, BIBLE_ID: 'licensed-test' }), async () => {
+    throw Error('No provider call expected');
+  });
+  await assert.rejects(() => stale.bible('John 15:1–8'), error => error.code === 'WEB_REQUIRED');
+  let aiCalls = 0;
+  const providers = createLiveProviders(loadConfig(liveEnv), async url => {
+    if (url.includes('api.openai.com')) aiCalls++;
+    return Response.json({ data: { id: WEB_BIBLE_ID, abbreviation: 'CSB', copyright: 'Copyright holder' } });
+  });
+  await assert.rejects(() => providers.bible('John 15:1–8'), error => error.code === 'BIBLE_METADATA');
+  const source = { id: 'S1', bibleId: 'licensed-test', translation: 'CSB',
+    copyright: 'Copyright holder', reference: 'John 15:1–8', text: 'LICENSED_TEXT_SENTINEL' };
+  await assert.rejects(() => providers.study({ question: 'Study', main: source.reference }, [source],
+    { cost: 0, input: 0, output: 0 }), error => error.code === 'WEB_REQUIRED');
+  assert.equal(aiCalls, 0);
+});
+
+test('Guided Study feedback sends only verified WEB passage and selected notes', async () => {
+  const requests = [];
+  const answers = [
+    { encouragement: 'Keep looking closely.', observation: 'Notice the repeated image.',
+      nextQuestion: 'What changes in the passage?', caution: '' },
+    { supported: 'Your reading attends to the image.', inference: 'Check the conclusion against the words.',
+      uncertainty: '', nextQuestion: 'What supports this conclusion?' },
+    { textualAnchor: 'The passage invites a response.', faithfulResponse: 'Respond with care.',
+      boundary: 'Avoid making a personal step a universal command.', nextStep: 'Reflect and pray.' },
+  ];
+  const providers = createLiveProviders(loadConfig(liveEnv), async (url, options) => {
+    assert.match(url, /api.openai.com/);
+    requests.push(JSON.parse(options.body));
+    return Response.json({ usage: { prompt_tokens: 200, completion_tokens: 100 },
+      choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(answers[requests.length - 1]) } }] });
+  });
+  const source = { bibleId: WEB_BIBLE_ID, translation: 'WEB', copyright: 'PUBLIC DOMAIN',
+    reference: 'John 15:1–8', text: 'Public-domain WEB passage text' };
+  const meter = { cost: 0, input: 0, output: 0 };
+  await providers.observationFeedback(source, 'I noticed a repeated image.', meter);
+  await providers.interpretationFeedback(source, 'This image seems to explain dependence.', meter);
+  await providers.applicationFeedback(source, 'I want to respond with care.', meter);
+  assert.equal(requests.length, 3);
+  for (const request of requests) {
+    assert.equal(request.store, false);
+    assert.match(request.messages[1].content, /Public-domain WEB passage text/);
+    assert.doesNotMatch(request.messages[1].content, /LICENSED_TEXT_SENTINEL/);
+  }
 });
