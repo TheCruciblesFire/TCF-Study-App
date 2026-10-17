@@ -5,6 +5,7 @@ import { methodology } from './methodology.js';
 import { getCommentaryPilot } from './commentary-pilot.js';
 
 export const WEB_BIBLE_ID = '9879dbb7cfe39e4d-01';
+export const CSB_BIBLE_ID = 'a556c5305ee15c3f-01';
 
 const routeSchema = z.object({
   kind: z.enum(['passage', 'question', 'unsupported']),
@@ -148,6 +149,50 @@ export function createLiveProviders(config, fetcher = fetch) {
     return { reference: cleanText(data.reference), text: cleanText(data.content), url: parsed.url, bibleId: data.bibleId, ...bibleMetadata,
       copyright, verseCount: data.verseCount, fumsToken: meta.fumsToken };
   }
+  // Display-only CSB retrieval. This method is never passed into the AI study
+  // provider; generated studies continue to use verified WEB sources above.
+  let csbMetadata;
+  async function csb(reference) {
+    const parsed = parseReference(reference);
+    if (!parsed) throw new AppError(422, 'INVALID_REFERENCE', 'Please use a single chapter or verse range.');
+    const root = `https://rest.api.bible/v1/bibles/${CSB_BIBLE_ID}`;
+    const headers = { 'api-key': config.TCF_BIBLE_API_KEY };
+    if (!csbMetadata) {
+      let response;
+      try { response = await getJSON(root, { headers }, fetcher, 'The Bible provider'); }
+      catch (error) {
+        if (error.upstream?.status === 403) throw new AppError(503, 'CSB_ACCESS', 'CSB display is not available with the configured Bible API access.');
+        throw error;
+      }
+      const data = response.data;
+      const abbreviation = cleanText(data?.abbreviationLocal || data?.abbreviation || '');
+      const copyright = cleanText(data?.copyright || '');
+      if (data?.id !== CSB_BIBLE_ID || !/CSB$/i.test(abbreviation) || !copyright)
+        throw new AppError(502, 'BIBLE_METADATA', 'The CSB translation metadata could not be verified.');
+      csbMetadata = { translation: 'CSB', copyright, info: cleanText(data.info || '') };
+    }
+    const params = new URLSearchParams({ 'content-type': 'text', 'include-notes': 'false', 'include-titles': 'false', 'include-chapter-numbers': 'false', 'include-verse-numbers': 'true' });
+    const resource = parsed.start ? 'passages' : 'chapters';
+    let response;
+    try { response = await getJSON(`${root}/${resource}/${parsed.id}?${params}`, { headers }, fetcher, 'The Bible provider'); }
+    catch (error) {
+      if (error.upstream?.status === 403) throw new AppError(503, 'CSB_ACCESS', 'CSB display is not available with the configured Bible API access.');
+      throw error;
+    }
+    const { data, meta } = response;
+    if (!data?.content || !data.reference || !Number.isInteger(data.verseCount) || data.verseCount < 1)
+      throw new AppError(502, 'BIBLE_CONTENT', 'The CSB passage could not be retrieved.');
+    if (data.verseCount > 60 || data.content.length > 16000)
+      throw new AppError(422, 'PASSAGE_TOO_LONG', 'Please choose a passage of 60 verses or fewer.');
+    if (data.id !== parsed.id || data.bibleId !== CSB_BIBLE_ID)
+      throw new AppError(502, 'BIBLE_MISMATCH', 'The Bible provider returned a different CSB passage.');
+    if (typeof meta?.fumsToken !== 'string' || !meta.fumsToken || meta.fumsToken.length > 4096)
+      throw new AppError(502, 'BIBLE_USAGE', 'Required CSB usage-reporting data was unavailable.');
+    const copyright = cleanText(data.copyright || csbMetadata.copyright);
+    if (!copyright) throw new AppError(502, 'BIBLE_METADATA', 'The CSB passage copyright was unavailable.');
+    return { reference: cleanText(data.reference), text: cleanText(data.content), url: parsed.url.replace('/kjv/', '/csb/'),
+      bibleId: CSB_BIBLE_ID, ...csbMetadata, copyright, verseCount: data.verseCount, fumsToken: meta.fumsToken };
+  }
   async function complete(messages, schema, maxTokens, meter) {
     // UTF-8 byte count is deliberately conservative; reserve before sending anything billable.
     const maxInput = Buffer.byteLength(JSON.stringify({ messages, schema }), 'utf8') + 1024;
@@ -269,5 +314,5 @@ ${note ? 'One secondary Tyndale study note is supplied. Treat it as an attribute
     if (!parsed.success) throw new AppError(502,'INVALID_FEEDBACK','The application feedback could not be verified.');
     return parsed.data;
   }
-  return { route, bible, study, observationFeedback, interpretationFeedback, applicationFeedback };
+  return { route, bible, csb, study, observationFeedback, interpretationFeedback, applicationFeedback };
 }
