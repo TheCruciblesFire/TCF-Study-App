@@ -6,12 +6,11 @@ const conversation = $('#conversation'), welcome = $('#welcome'), status = $('#r
 let config, busy = false;
 let nextTurnId = 0;
 let studyMode = 'explore';
-const isEmbedded = window.parent !== window;
 function setStudyMode(mode) {
   studyMode = mode === 'blb' ? 'blb' : 'explore';
   document.querySelectorAll('[data-study-mode]').forEach(button => { button.setAttribute('aria-pressed', String(button.dataset.studyMode === studyMode)); });
   $('#study-mode-description').textContent = studyMode === 'blb'
-    ? isEmbedded ? 'Find a Blue Letter Bible passage or search, then copy its link to your browser. Your study stays here.' : 'Search Blue Letter Bible directly. Results open on blueletterbible.org in this window.'
+    ? 'Search Blue Letter Bible directly. Results open on blueletterbible.org in this window.'
     : 'Ask a biblical question or enter a passage below.';
   $('#blb-gateway').hidden = studyMode !== 'blb';
   document.querySelectorAll('.starter-heading, .starter-grid, .welcome-caption').forEach(node => { node.hidden = studyMode === 'blb'; });
@@ -283,8 +282,8 @@ blbForm.addEventListener('submit', event => {
     const range = blbRange.value.trim();
     if (range) url.searchParams.set('cscs', range);
   }
-  if (isEmbedded) showBlbHandoff(url.href, event.submitter || blbForm);
-  else window.top.location.href = url.href;
+  // A synchronous, user-initiated browser navigation; no hidden form POST or refresh.
+  window.top.location.href = url.href;
 });
 document.querySelectorAll('[data-study-mode]').forEach(button => button.addEventListener('click', () => setStudyMode(button.dataset.studyMode)));
 setStudyMode('explore');
@@ -304,50 +303,15 @@ document.querySelectorAll('[data-new-study]').forEach(button => button.addEventL
   } catch (error) { announce(error.message, true); }
   finally { setBusy(false); input.focus({ preventScroll: true }); }
 }));
-function showBlbHandoff(url, trigger) {
-  document.querySelector('.blb-handoff')?.remove();
-  const panel = el('section', 'blb-handoff');
-  panel.setAttribute('role', 'region');
-  panel.setAttribute('aria-label', 'Blue Letter Bible link');
-  const heading = el('h3', '', 'Continue in Blue Letter Bible');
-  const instructions = el('p', '', 'Copy this link and paste it into Safari or Chrome. Your study stays open here.');
-  const label = el('label', 'blb-handoff-label', 'Blue Letter Bible address');
-  const field = el('input', 'blb-handoff-url');
-  field.type = 'text'; field.readOnly = true; field.value = url;
-  field.id = 'blb-handoff-url'; label.htmlFor = field.id;
-  const copy = el('button', 'blb-copy-button', 'Copy link');
-  copy.type = 'button';
-  const status = el('p', 'blb-copy-status', '');
-  status.setAttribute('role', 'status');
-  copy.addEventListener('click', async () => {
-    try {
-      if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
-      await navigator.clipboard.writeText(url);
-      status.textContent = 'Link copied. Open your browser and paste it there.';
-    } catch {
-      field.focus({ preventScroll: true }); field.select();
-      let copied = false;
-      try { copied = document.execCommand?.('copy') === true; } catch { /* Address remains selectable. */ }
-      status.textContent = copied ? 'Link copied. Open your browser and paste it there.' : 'Select the address above and copy it, then paste it in your browser.';
-    }
-  });
-  const close = el('button', 'blb-handoff-close', 'Close');
-  close.type = 'button';
-  close.addEventListener('click', () => { panel.remove(); trigger.focus({ preventScroll: true }); });
-  panel.append(heading, instructions, label, field, copy, close, status);
-  const mount = trigger.closest('p, form, .tcf-blb-examples, .source-content') || trigger;
-  mount.after(panel);
-  copy.focus({ preventScroll: true });
-  scrollToElement(panel);
-}
-if (isEmbedded) {
+// Embedded BLB links use the same top-page navigation as the working Deep Dive widget.
+if (window.parent !== window) {
   document.addEventListener('click', event => {
     const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
     if (!link) return;
     const url = new URL(link.href);
     if (url.protocol !== 'https:' || url.hostname !== 'www.blueletterbible.org') return;
     event.preventDefault();
-    showBlbHandoff(url.href, link);
+    window.top.location.href = url.href;
   });
 }
 const dialog = $('#info-dialog');
