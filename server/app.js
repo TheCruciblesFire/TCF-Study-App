@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { createStore } from './store.js';
 import { createDemoProviders } from './demo.js';
-import { createLiveProviders, validateStudy, validateCommentaryInsight, explainSources } from './providers.js';
+import { createLiveProviders, validateStudy, validateCommentaryInsight, explainSources, CSB_BIBLE_ID } from './providers.js';
 import { parseReference } from './references.js';
 import { getCommentaryPilot } from './commentary-pilot.js';
 import { AppError } from './errors.js';
@@ -169,6 +169,7 @@ export function createApp(config, overrides = {}) {
       if (!body.success) throw new AppError(400, 'INVALID_MESSAGE', 'Enter a biblical question or passage, using 1–1,500 characters.');
       store.begin(req.studySession.id); began = true;
       if (config.APP_MODE === 'live') reservation = store.reserve();
+      let csbPassage;
       const result = await runRoutedStudy({
         message: body.data.message, history: req.studySession.history, meter, providers,
         normalizeRoute: (route, message, history) => preserveFollowupPassage(route, message, history),
@@ -190,6 +191,12 @@ export function createApp(config, overrides = {}) {
             try { sources.push({ ...await providers.bible(contextReference), id: `S${sources.length + 1}`, role: 'Immediate context' }); }
             catch (error) { if (!['INVALID_REFERENCE', 'BIBLE_CONTENT', 'PROVIDER_ERROR'].includes(error.code)) throw error; }
           }
+          if (config.APP_MODE === 'live' && config.COMMENTARY_PILOT_ENABLED && getCommentaryPilot(sources[0].reference)) {
+            if (typeof providers.csb !== 'function') throw new AppError(503, 'CSB_ACCESS', 'CSB display is unavailable in this study mode.');
+            csbPassage = await providers.csb(sources[0].reference);
+            if (csbPassage.bibleId !== CSB_BIBLE_ID || csbPassage.translation !== 'CSB' || !csbPassage.fumsToken)
+              throw new AppError(502, 'BIBLE_MISMATCH', 'The CSB display passage could not be verified.');
+          }
           return sources;
         },
         verifyStudy: (data, sources) => {
@@ -204,11 +211,14 @@ export function createApp(config, overrides = {}) {
             message: 'I can help with a passage study or a basic biblical question. Full topical surveys, original-language research, commentary searches, and deep dives are not available in this version. Try a specific passage or a narrower question.' }
         : { mode: config.APP_MODE, kind: route.kind, sources: explainSources(study, sources), study,
              ...(config.APP_MODE === 'live' ? { grounding: 'web_text' } : {}),
+             ...(csbPassage ? { csbPassage } : {}),
              ...(config.APP_MODE === 'live' && config.COMMENTARY_PILOT_ENABLED && study.commentaryInsight
                ? { commentaryPilot: getCommentaryPilot(sources[0].reference) } : {}),
             ...(route.key ? { demoKey: route.key } : {}) };
       // Analytics tokens belong only in the immediate response, never stored in history.
       const retained = structuredClone(answer);
+      // Licensed CSB display text and its FUMS token are response-only.
+      delete retained.csbPassage;
       for (const source of retained.sources) delete source.fumsToken;
       store.save(req.studySession.id, [...req.studySession.history, { question: body.data.message, answer: retained }]);
       if (reservation) { store.settle(reservation, meter, false); reservation = undefined; }
