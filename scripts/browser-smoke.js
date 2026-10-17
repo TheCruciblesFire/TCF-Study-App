@@ -40,7 +40,7 @@ try {
   await page.locator('.new-study').click();
   await page.locator('#welcome:visible').waitFor(); assert.equal(await page.locator('.turn').count(), 0);
   // Exercise the BLB gateway as a visitor, including its new-tab navigation.
-  await context.route('https://www.blueletterbible.org/search/search.cfm**', route => route.fulfill({ contentType: 'text/html', body: '<title>BLB destination</title>' }));
+  await context.route('https://www.blueletterbible.org/**', route => route.fulfill({ contentType: 'text/html', body: '<title>BLB destination</title>' }));
   await page.locator('[data-study-mode="blb"]').click();
   await page.locator('#blb-gateway:visible').waitFor();
   assert.equal(await page.locator('.composer-wrap').isHidden(), true);
@@ -53,16 +53,20 @@ try {
     const url = new URL(popup.url());
     await popup.close();
     assert.equal(url.origin, 'https://www.blueletterbible.org');
-    assert.equal(url.pathname, '/search/search.cfm');
     return url;
   }
-  let blbUrl = await searchBlb('Romans 10');
-  assert.equal(blbUrl.searchParams.get('Criteria'), 'Romans 10');
-  assert.equal(blbUrl.searchParams.get('t'), 'CSB');
-  assert.equal(blbUrl.searchParams.has('cscs'), false);
+  let blbUrl = await searchBlb('Romans 10:1');
+  assert.equal(blbUrl.href, 'https://www.blueletterbible.org/csb/rom/10/1/');
+  blbUrl = await searchBlb('John 3:16');
+  assert.equal(blbUrl.href, 'https://www.blueletterbible.org/csb/jhn/3/16/');
+  await page.locator('#tcf-blb-translation').selectOption('ESV');
+  blbUrl = await searchBlb('Romans 10');
+  assert.equal(blbUrl.href, 'https://www.blueletterbible.org/esv/rom/10/1/');
+  await page.locator('#tcf-blb-translation').selectOption('CSB');
   await page.locator('.tcf-blb-summary').click();
   await page.locator('#tcf-blb-range').fill('Rom 10');
   blbUrl = await searchBlb('faith');
+  assert.equal(blbUrl.pathname, '/search/search.cfm');
   assert.equal(blbUrl.searchParams.get('Criteria'), 'faith');
   assert.equal(blbUrl.searchParams.get('t'), 'CSB');
   assert.equal(blbUrl.searchParams.get('cscs'), 'Rom 10');
