@@ -10,7 +10,7 @@ function setStudyMode(mode) {
   studyMode = mode === 'blb' ? 'blb' : 'explore';
   document.querySelectorAll('[data-study-mode]').forEach(button => { button.setAttribute('aria-pressed', String(button.dataset.studyMode === studyMode)); });
   $('#study-mode-description').textContent = studyMode === 'blb'
-    ? 'Search Blue Letter Bible directly. Results open on blueletterbible.org in a new tab.'
+    ? 'Search Blue Letter Bible directly. Results open on blueletterbible.org in this window.'
     : 'Ask a biblical question or enter a passage below.';
   $('#blb-gateway').hidden = studyMode !== 'blb';
   document.querySelectorAll('.starter-heading, .starter-grid, .welcome-caption').forEach(node => { node.hidden = studyMode === 'blb'; });
@@ -30,7 +30,11 @@ function setBusy(value) {
   form.setAttribute('aria-busy', String(value));
 }
 function announce(message, error = false) { status.textContent = message; status.classList.toggle('error', error); }
-function scrollToElement(element) { element.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' }); }
+let scrollEmbeddedPageTo;
+function scrollToElement(element) {
+  if (scrollEmbeddedPageTo) { scrollEmbeddedPageTo(element); return; }
+  element.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+}
 async function request(path, body) {
   let response;
   try {
@@ -111,7 +115,7 @@ function sourceCard(source, turnId) {
   // Only server-constructed, allowlisted links. Model output never becomes a URL or HTML.
   try {
     const link = el('a', 'source-link', 'Read this passage on Blue Letter Bible (CSB) ↗');
-    link.href = blbPassageUrl(source.url); link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
+    link.href = blbPassageUrl(source.url); link.target = '_top'; content.append(link);
   } catch { /* Source text remains available if its external link is invalid. */ }
   details.append(summary, content); return details;
 }
@@ -130,7 +134,7 @@ function paragraphWithEvidence(item, sources, turnId) {
     button.setAttribute('aria-label', `Read source: ${source.reference}`);
     button.addEventListener('click', () => {
       const details = document.getElementById(`${turnId}-${id}`); details.open = true;
-      details.querySelector('summary').focus(); scrollToElement(details);
+      details.querySelector('summary').focus({ preventScroll: true }); scrollToElement(details);
     });
     p.append(button);
   }
@@ -148,7 +152,7 @@ function renderAnswer(answer, mount, turnId) {
   try {
     const studyMore = el('p', 'study-more');
     const link = el('a', 'source-link', 'Study this passage further in Blue Letter Bible (CSB) ↗');
-    link.href = blbPassageUrl(answer.sources[0].url); link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.href = blbPassageUrl(answer.sources[0].url); link.target = '_top';
     studyMore.append(link, el('span', 'source-disclosure', ' On BLB, open Tools beside a verse for commentaries and language resources.'));
     card.append(studyMore);
   } catch { /* Keep the study available if its external passage URL is invalid. */ }
@@ -195,7 +199,7 @@ function renderAnswer(answer, mount, turnId) {
         note.keywords.slice(0, 3).forEach((word, index) => {
           if (index) deepDive.append(document.createTextNode(' · '));
           const link = el('a', 'source-link', word);
-          link.href = blbSearchUrl(word); link.target = '_blank'; link.rel = 'noopener noreferrer';
+          link.href = blbSearchUrl(word); link.target = '_top';
           link.setAttribute('aria-label', 'Explore ' + word + ' in ' + note.reference + ' on Blue Letter Bible');
           deepDive.append(link);
         });
@@ -279,7 +283,7 @@ blbForm.addEventListener('submit', event => {
     if (range) url.searchParams.set('cscs', range);
   }
   // A synchronous, user-initiated browser navigation; no hidden form POST or refresh.
-  window.open(url.href, '_blank', 'noopener,noreferrer');
+  window.top.location.href = url.href;
 });
 document.querySelectorAll('[data-study-mode]').forEach(button => button.addEventListener('click', () => setStudyMode(button.dataset.studyMode)));
 setStudyMode('explore');
@@ -293,7 +297,8 @@ document.querySelectorAll('[data-new-study]').forEach(button => button.addEventL
   try {
     await request('/api/session/reset', {});
     conversation.replaceChildren(); conversation.hidden = true; welcome.hidden = false; setStudyMode('explore'); input.value = ''; input.style.height = ''; announce('A fresh study. Where would you like to begin?');
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (scrollEmbeddedPageTo) scrollToElement(document.querySelector('.app-shell'));
+    else window.scrollTo({ top: 0, behavior: 'instant' });
     $('#study-body').scrollTo({ top: 0, behavior: 'instant' });
   } catch (error) { announce(error.message, true); }
   finally { setBusy(false); input.focus({ preventScroll: true }); }
@@ -324,21 +329,33 @@ dialog.addEventListener('click', event => { if (event.target === dialog) { const
 
 // The SnapPages host opts in before the app changes its scrolling layout.
 const embedHostOrigins = ['https://thecruciblesfire.org', 'https://www.thecruciblesfire.org'];
-function enableAutoHeightEmbed(hostOrigin) {
+function enableAutoHeightEmbed(hostOrigin, parentScroll) {
   if (document.documentElement.classList.contains('tcf-autoheight')) return;
   document.documentElement.classList.add('tcf-autoheight');
   const shell = document.querySelector('.app-shell');
   let pending = false;
+  let queuedScrollTarget;
   const sendHeight = () => {
     pending = false;
     const height = Math.ceil(Math.max(shell.getBoundingClientRect().height, shell.scrollHeight));
     if (height > 0) window.parent.postMessage({ type: 'tcf-study:height', height }, hostOrigin);
+    if (queuedScrollTarget) {
+      const top = Math.max(0, Math.round(queuedScrollTarget.getBoundingClientRect().top + window.scrollY));
+      window.parent.postMessage({ type: 'tcf-study:scroll-to', top }, hostOrigin);
+      queuedScrollTarget = undefined;
+    }
   };
   const scheduleHeight = () => {
     if (pending) return;
     pending = true;
     requestAnimationFrame(sendHeight);
   };
+  if (parentScroll === true) {
+    scrollEmbeddedPageTo = element => {
+      queuedScrollTarget = element;
+      scheduleHeight();
+    };
+  }
   new ResizeObserver(scheduleHeight).observe(shell);
   window.addEventListener('resize', scheduleHeight);
   document.fonts.ready.then(scheduleHeight);
@@ -348,7 +365,7 @@ if (window.parent !== window) {
   window.addEventListener('message', event => {
     if (event.source !== window.parent || !embedHostOrigins.includes(event.origin) ||
         event.data?.type !== 'tcf-study:enable-autoheight') return;
-    enableAutoHeightEmbed(event.origin);
+    enableAutoHeightEmbed(event.origin, event.data.parentScroll);
   });
   const announceEmbedReady = () => {
     for (const origin of embedHostOrigins)
