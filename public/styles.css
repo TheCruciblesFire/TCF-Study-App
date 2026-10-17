@@ -101,6 +101,10 @@ textarea::placeholder { color: #a9a99e; }
 .answer-section h3 { font-family: var(--label); font-size: 16px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.3px; color: var(--gold-light); margin: 0 0 12px; }
 .answer-section p, .answer-section li, .answer-message { font-size: 17px; line-height: 1.85; color: #e3e3dc; margin: 0 0 15px; }
 .answer-section ul, .answer-section ol { padding-left: 22px; }
+.commentary-pilot { border-left: 3px solid var(--gold-light); background: #1b1b17; padding: 18px 20px; border-radius: 0 6px 6px 0; }
+.commentary-pilot .source-disclosure { font-size: 13px; color: #b3b3a6; margin: 8px 0; }
+.commentary-pilot .commentary-keywords { font-size: 14px; margin: 14px 0 3px; }
+.commentary-pilot a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 3px; }
 .evidence-link { border: 1px solid #605b34; background: #1e1d13; color: var(--gold-light); border-radius: 3px; font-size: 12px; padding: 3px 7px; margin: 0 0 0 6px; vertical-align: middle; }
 .evidence-link:hover { border-color: var(--gold-light); }
 .study-caveat { margin: 24px 0; padding: 17px 20px; background: #19180f; border-left: 2px solid var(--gold); color: #d8d1a3; font-size: 14px; line-height: 1.9; }

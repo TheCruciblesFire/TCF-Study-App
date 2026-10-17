@@ -11,6 +11,7 @@ import { createStore } from './store.js';
 import { createDemoProviders } from './demo.js';
 import { createLiveProviders, validateStudy, explainSources } from './providers.js';
 import { parseReference } from './references.js';
+import { getCommentaryPilot } from './commentary-pilot.js';
 import { AppError } from './errors.js';
 import { loadLexicalIndexes, lookupStrong, searchEnglishGloss } from './strong-lookup.js';
 
@@ -76,6 +77,7 @@ export function createApp(config, overrides = {}) {
     const session = store.session();
     res.json({ mode: config.APP_MODE, sessionToken: session.raw, maxMessageLength: 1500,
       lexicalLookupEnabled: Boolean(lexicalIndexes),
+      commentaryPilotEnabled: config.APP_MODE === 'live' && config.COMMENTARY_PILOT_ENABLED,
       methodology: 'KV Study Engine 3.0.1 · passage-study adaptation',
       examples: ['Study John 15:1–8', 'Walk through Psalm 23', 'What is grace?'] });
   });
@@ -198,6 +200,8 @@ export function createApp(config, overrides = {}) {
             message: 'I can help with a passage study or a basic biblical question. Full topical surveys, original-language research, commentary searches, and deep dives are not available in this version. Try a specific passage or a narrower question.' }
         : { mode: config.APP_MODE, kind: route.kind, sources: explainSources(study, sources), study,
              ...(config.APP_MODE === 'live' ? { grounding: 'web_text' } : {}),
+             ...(config.APP_MODE === 'live' && config.COMMENTARY_PILOT_ENABLED && study.commentaryInsight
+               ? { commentaryPilot: getCommentaryPilot(sources[0].reference) } : {}),
             ...(route.key ? { demoKey: route.key } : {}) };
       // Analytics tokens belong only in the immediate response, never stored in history.
       const retained = structuredClone(answer);

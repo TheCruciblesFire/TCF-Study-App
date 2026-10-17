@@ -23,6 +23,7 @@ const schema = z.object({
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
   DATA_DIR: z.string().default('.data'),
   LEXICON_DIR: z.string().default(''),
+  COMMENTARY_PILOT_ENABLED: z.enum(['true', 'false']).default('false').transform(value => value === 'true'),
 });
 export function loadConfig(env = process.env) {
   const parsed = schema.safeParse({ ...env,
