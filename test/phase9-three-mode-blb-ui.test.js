@@ -18,6 +18,7 @@ test('BLB gateway preserves original GET search and selected translation indepen
  assert.match(html,/name="t"/);
  assert.match(html,/<option value="CSB" selected>/);
  assert.match(html,/name="cscs" maxlength/);
+ assert.match(html,/blueletterbible\.org\/csb\/jhn\/3\/16\//);
  assert.doesNotMatch(html,/name="cscs" disabled/);
  assert.match(js,/const range = blbRange\.value\.trim\(\)/);
  assert.doesNotMatch(html,/preSearch\.cfm/);
@@ -34,6 +35,9 @@ test('BLB site fallback is voluntary and never refreshes external pages',()=>{as
 
 test('BLB search uses an explicit user-triggered navigation with stable params',()=>{
  assert.match(js,/blbForm\.addEventListener\('submit', event => \{/);
+ assert.match(js,/import \{ parseReference \} from '\.\/references\.js'/);
+ assert.match(js,/const passage = parseReference\(criteria\)/);
+ assert.match(js,/url\.pathname = url\.pathname\.replace/);
  assert.match(js,/event\.preventDefault\(\)/);
  assert.match(js,/url\.searchParams\.set\('Criteria', criteria\)/);
  assert.match(js,/link\.href = blbSearchUrl\(word\)/);
