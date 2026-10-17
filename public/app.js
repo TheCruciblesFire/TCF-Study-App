@@ -321,4 +321,40 @@ $('#privacy-button').addEventListener('click', () => openInfo('Study with care.'
 ]));
 dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
+
+// The SnapPages host opts in before the app changes its scrolling layout.
+const embedHostOrigins = ['https://thecruciblesfire.org', 'https://www.thecruciblesfire.org'];
+function enableAutoHeightEmbed(hostOrigin) {
+  if (document.documentElement.classList.contains('tcf-autoheight')) return;
+  document.documentElement.classList.add('tcf-autoheight');
+  const shell = document.querySelector('.app-shell');
+  let pending = false;
+  const sendHeight = () => {
+    pending = false;
+    const height = Math.ceil(Math.max(shell.getBoundingClientRect().height, shell.scrollHeight));
+    if (height > 0) window.parent.postMessage({ type: 'tcf-study:height', height }, hostOrigin);
+  };
+  const scheduleHeight = () => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(sendHeight);
+  };
+  new ResizeObserver(scheduleHeight).observe(shell);
+  window.addEventListener('resize', scheduleHeight);
+  document.fonts.ready.then(scheduleHeight);
+  scheduleHeight();
+}
+if (window.parent !== window) {
+  window.addEventListener('message', event => {
+    if (event.source !== window.parent || !embedHostOrigins.includes(event.origin) ||
+        event.data?.type !== 'tcf-study:enable-autoheight') return;
+    enableAutoHeightEmbed(event.origin);
+  });
+  const announceEmbedReady = () => {
+    for (const origin of embedHostOrigins)
+      window.parent.postMessage({ type: 'tcf-study:ready' }, origin);
+  };
+  announceEmbedReady();
+  window.addEventListener('load', announceEmbedReady, { once: true });
+}
 setBusy(false); connect();
