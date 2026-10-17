@@ -13,11 +13,11 @@ test('guide rejects malformed section group inputs', () => {
   assert.throws(() => createInductiveGuide({sections:[],reference:'John 15'}),/three existing/);
   assert.throws(() => createInductiveGuide({sections:[[1],[],null],reference:'John 15'}),/three existing/);
 });
-test('guided study remains local-only and preview-integrated', () => {
+test('dormant inductive guide remains local-only and preview-buildable', () => {
   const source=readFileSync('public/inductive-guide.js','utf8');
   const preview=readFileSync('scripts/build-preview.js','utf8');
   const ui=readFileSync('public/app.js','utf8');
   assert.doesNotMatch(source,/fetch\(|localStorage|sessionStorage|\/api\//);
   assert.match(preview,/standaloneModule\('public\/inductive-guide.js'\)/);
-  assert.match(ui,/createInductiveGuide\(/);
+  assert.doesNotMatch(ui,/createInductiveGuide\(/);
 });
