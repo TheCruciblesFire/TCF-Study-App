@@ -2,6 +2,10 @@
 
 **Status:** The three-mode selector and BLB gateway are implemented, and the standalone lexical lookup UI is removed. Phase 9A foundation remains in progress; see [incremental 9A implementation](phase9a-lexical-foundation.md) and [consolidated delivery plan and exit criteria](phase9-consolidated-delivery-and-exit.md). Production verified verse-linked datasets, initial-response lexical packets, and integrated Key Words cards are not implemented; original-language runtime support remains disabled. **Scope:** TCF Bible Study Assistant, after PR #40. **MCP:** Deferred; no MCP work in Phase 9.
 
+## Commentary study pilot (draft, default off)
+
+A two-passage alternative to in-app original-language cards is being evaluated. See [bounded commentary study pilot](commentary-study-pilot.md). It uses attributed Tyndale study-note context for John 15:4 and Psalm 23:1, plus user-initiated BLB verse links for language work. It does not satisfy or bypass the Phase 9A original-language exit gate. The integrated Key Words target below remains historical planning until the pilot is evaluated and a replacement product decision is recorded.
+
 ## Product decision
 
 The landing screen presents exactly **three top-level study choices**:

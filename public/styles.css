@@ -101,6 +101,12 @@ textarea::placeholder { color: #a9a99e; }
 .answer-section h3 { font-family: var(--label); font-size: 16px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.3px; color: var(--gold-light); margin: 0 0 12px; }
 .answer-section p, .answer-section li, .answer-message { font-size: 17px; line-height: 1.85; color: #e3e3dc; margin: 0 0 15px; }
 .answer-section ul, .answer-section ol { padding-left: 22px; }
+.commentary-pilot { border-left: 3px solid var(--gold-light); background: #1b1b17; padding: 18px 20px; border-radius: 0 6px 6px 0; }
+.commentary-pilot .source-disclosure { font-size: 13px; color: #b3b3a6; margin: 8px 0; }
+.commentary-pilot .commentary-keywords { font-size: 14px; margin: 14px 0 3px; }
+.commentary-pilot a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 3px; }
+.commentary-source summary { color: var(--gold-light); cursor: pointer; font-size: 13px; margin: 9px 0; }
+.commentary-source p { font-size: 14px; margin: 4px 0 9px; }
 .evidence-link { border: 1px solid #605b34; background: #1e1d13; color: var(--gold-light); border-radius: 3px; font-size: 12px; padding: 3px 7px; margin: 0 0 0 6px; vertical-align: middle; }
 .evidence-link:hover { border-color: var(--gold-light); }
 .study-caveat { margin: 24px 0; padding: 17px 20px; background: #19180f; border-left: 2px solid var(--gold); color: #d8d1a3; font-size: 14px; line-height: 1.9; }
@@ -496,8 +502,14 @@ transition: none !important;
 
 #blb-gateway { margin-top: 28px; }
 #blb-gateway[hidden], .composer-wrap[hidden], .starter-heading[hidden], .starter-grid[hidden], .welcome-caption[hidden] { display: none !important; }
-.study-mode-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.study-mode-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 760px) { .study-mode-options { grid-template-columns: 1fr; } }
 
 .blb-fallback-note { color: #d3d0bc; font-size: 13px; line-height: 1.6; margin: 14px 0 4px; }
 .blb-fallback-note a { color: var(--gold-light); text-underline-offset: 3px; }
+
+.csb-reading { border: 1px solid #5b4e32; border-radius: 5px; padding: 20px 24px; margin: 22px 0 26px; background: #14130f; }
+.csb-reading h3 { color: var(--gold-light); font: 600 17px var(--label); letter-spacing: .5px; margin: 0 0 12px; }
+.csb-reading .scripture-text { margin-bottom: 14px; }
+.csb-reading .copyright { color: var(--muted); font-size: 12px; }
+.csb-reading .source-disclosure { margin-bottom: 0; }

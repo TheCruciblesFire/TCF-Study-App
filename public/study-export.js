@@ -1,5 +1,6 @@
 // Study-note export deliberately omits the full Scripture text, FUMS tokens,
-// session identifiers and links. This is an outline for personal review.
+// session identifiers and external study links. License attribution links
+// accompany adapted commentary when present. This is an outline for personal review.
 export function formatStudyNotes(answer) {
   if (!answer?.study || !Array.isArray(answer.sources) || !answer.sources.length) {
     throw Error('A completed study is required');
@@ -25,6 +26,15 @@ export function formatStudyNotes(answer) {
       lines.push('- ' + item.text + (references.length ? ' [' + references.join('; ') + ']' : ''));
     }
     lines.push('');
+  }
+  if (answer.commentaryPilot && study.commentaryInsight?.noteId === answer.commentaryPilot.id) {
+    const note = answer.commentaryPilot;
+    lines.push('A study note to consider', study.commentaryInsight.text,
+      'AI summary adapted from ' + note.title + ' on ' + note.reference + '. ' + note.copyright,
+      'Source summary supplied to the AI: ' + note.text,
+      note.attribution, 'Read the chapter notes: ' + note.sourceViewUrl,
+      'Original work and downloads: ' + note.sourceUrl,
+      'License: ' + note.license + ' ' + note.licenseUrl, '');
   }
   lines.push('Keep exploring');
   for (const question of study.furtherStudy ?? []) lines.push('- ' + question);

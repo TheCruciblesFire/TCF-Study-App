@@ -27,7 +27,7 @@ async function fetch(path, options = {}) {
   } catch(error) { return Response.json({error:{message:error.message}}, {status:error.status || 500}); }
 }
 `;
-const javascript = [standaloneModule('server/errors.js'), standaloneModule('server/references.js'), standaloneModule('server/demo.js'), standaloneModule('public/study-export.js'), standaloneModule('public/inductive-guide.js'), bridge,
+const javascript = [standaloneModule('server/errors.js'), standaloneModule('public/references.js'), standaloneModule('server/demo.js'), standaloneModule('public/study-export.js'), standaloneModule('public/inductive-guide.js'), bridge,
   standaloneModule('public/app.js')].join('\n');
 let html = read('public/index.html')
   .replace('<title>Bible Study Assistant · The Crucible’s Fire</title>', '<title>TCF Bible Study Assistant · Offline Demo</title>')

@@ -6,9 +6,10 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { createApp } from '../server/app.js';
 import { loadConfig } from '../server/config.js';
-import { createLiveProviders, validateStudy, validateRouteSources, explainSources, WEB_BIBLE_ID } from '../server/providers.js';
+import { createLiveProviders, validateStudy, validateRouteSources, explainSources, WEB_BIBLE_ID, CSB_BIBLE_ID } from '../server/providers.js';
 import { createStore } from '../server/store.js';
 import { createDemoProviders } from '../server/demo.js';
+import { getCommentaryPilot } from '../server/commentary-pilot.js';
 
 async function fixture(t, env = {}, overrides = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'tcf-test-'));
@@ -134,6 +135,29 @@ test('live provider contract: route, authorized retrieval, generation, attributi
   assert.deepEqual(JSON.parse(generation.messages[1].content).sources.map(source => Object.keys(source)), [['id', 'reference', 'text', 'translation'], ['id', 'reference', 'text', 'translation'], ['id', 'reference', 'text', 'translation']]);
   assert.equal(answer.grounding, 'web_text');
   assert.equal(answer.study.observations[0].strength, 'direct_text');
+});
+
+test('pilot insight and its source links reach the chat response', async t => {
+  const demo = createDemoProviders();
+  const providers = { ...demo, async csb(reference) {
+    return { reference, text: 'CSB LICENSED DISPLAY SENTINEL', translation: 'CSB', bibleId: CSB_BIBLE_ID, copyright: '© CSB', fumsToken: 'csb-test-token' };
+  }, async study(route, sources) {
+    assert.ok(sources.every(source => source.translation !== 'CSB'));
+    const answer = await demo.study(route, sources);
+    const note = getCommentaryPilot(sources[0].reference);
+    return { ...answer, commentaryInsight: { noteId: note.id, text: 'The image invites reflection on dependence and care.' } };
+  } };
+  const { post, store, sessionToken } = await fixture(t, { ...liveEnv, COMMENTARY_PILOT_ENABLED: 'true' }, { providers });
+  const response = await post('Study John 15:1–8');
+  assert.equal(response.status, 200);
+  const answer = await response.json();
+  assert.equal(answer.study.commentaryInsight.noteId, 'TOSN-JHN-15-4');
+  assert.equal(answer.commentaryPilot.id, answer.study.commentaryInsight.noteId);
+  assert.equal(answer.commentaryPilot.sourceUrl, 'https://tyndaleopenresources.com/');
+  assert.equal(answer.commentaryPilot.blbUrl, 'https://www.blueletterbible.org/csb/jhn/15/4/');
+  assert.equal(answer.csbPassage.text, 'CSB LICENSED DISPLAY SENTINEL');
+  assert.equal(answer.csbPassage.fumsToken, 'csb-test-token');
+  assert.doesNotMatch(JSON.stringify(store.session(sessionToken, false).history), /CSB LICENSED DISPLAY SENTINEL|csb-test-token/);
 });
 
 test('follow-up routing sends prior questions and references without study prose or passage text', async () => {
