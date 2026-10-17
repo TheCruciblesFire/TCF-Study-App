@@ -186,7 +186,7 @@ try {
   await frame.locator('.blb-copy-button').click();
   await frame.locator('.blb-copy-status:not(:empty)').waitFor();
   await frame.locator('.blb-handoff-close').click();
-  await frame.getByRole('button', { name: 'Start a new study' }).click();
+  await frame.locator('.new-study').click();
   await frame.locator('#welcome:visible').waitFor();
   await frame.locator('[data-study-mode="blb"]').click();
   await frame.locator('#tcf-blb-criteria').fill('Romans 10:1');
