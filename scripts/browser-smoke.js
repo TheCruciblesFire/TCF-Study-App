@@ -33,12 +33,40 @@ try {
   assert.equal(await page.locator('.source-card').first().getAttribute('open'), '');
   assert.match(await page.locator('.scripture-text').first().textContent(), /I am the true vine/);
   assert.equal(await page.locator('.source-card').first().getByRole('link', { name: /Read this passage on Blue Letter Bible/ }).getAttribute('href'), 'https://www.blueletterbible.org/csb/jhn/15/1/');
-  assert.equal(await page.getByRole('link', { name: 'Explore commentaries for John 15:1–8 ↗' }).getAttribute('href'), 'https://www.blueletterbible.org/verse/csb/jhn/15/1/');
+  assert.equal(await page.getByRole('link', { name: 'Study this passage further in Blue Letter Bible (CSB) ↗' }).getAttribute('href'), 'https://www.blueletterbible.org/csb/jhn/15/1/');
   await page.getByRole('button', { name: 'How can I apply this today?', exact: true }).click();
   await page.getByRole('heading', { name: 'Abiding in Christ: putting it into practice' }).waitFor();
   await page.screenshot({ path: 'test-results/study.png', fullPage: true });
   await page.locator('.new-study').click();
   await page.locator('#welcome:visible').waitFor(); assert.equal(await page.locator('.turn').count(), 0);
+  // Exercise the BLB gateway as a visitor, including its new-tab navigation.
+  await context.route('https://www.blueletterbible.org/search/search.cfm**', route => route.fulfill({ contentType: 'text/html', body: '<title>BLB destination</title>' }));
+  await page.locator('[data-study-mode="blb"]').click();
+  await page.locator('#blb-gateway:visible').waitFor();
+  assert.equal(await page.locator('.composer-wrap').isHidden(), true);
+  async function searchBlb(criteria) {
+    await page.locator('#tcf-blb-criteria').fill(criteria);
+    const popupPromise = context.waitForEvent('page');
+    await page.locator('.tcf-blb-submit').click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState('domcontentloaded');
+    const url = new URL(popup.url());
+    await popup.close();
+    assert.equal(url.origin, 'https://www.blueletterbible.org');
+    assert.equal(url.pathname, '/search/search.cfm');
+    return url;
+  }
+  let blbUrl = await searchBlb('Romans 10');
+  assert.equal(blbUrl.searchParams.get('Criteria'), 'Romans 10');
+  assert.equal(blbUrl.searchParams.get('t'), 'CSB');
+  assert.equal(blbUrl.searchParams.has('cscs'), false);
+  await page.locator('#tcf-blb-range').fill('Rom 10');
+  blbUrl = await searchBlb('faith');
+  assert.equal(blbUrl.searchParams.get('Criteria'), 'faith');
+  assert.equal(blbUrl.searchParams.get('t'), 'CSB');
+  assert.equal(blbUrl.searchParams.get('cscs'), 'Rom 10');
+  await page.locator('[data-study-mode="explore"]').click();
+  assert.equal(await page.locator('.composer-wrap').isVisible(), true);
   // Mobile interaction and layout, including keyboard submission and modal focus.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: 'test-results/mobile.png', fullPage: true });
