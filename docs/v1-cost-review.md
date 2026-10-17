@@ -1,5 +1,5 @@
 # TCF Study App — Cost controls and operating review
-Reviewed 2026-10-15. This is a configuration/pricing analysis, not access to real provider invoices or balances.
+Reviewed 2026-10-15. This is a historical configuration/pricing analysis, not access to real provider invoices or balances. The connected service now has a 10 GB disk and runs Docker; the 1 GB hosting estimate below does not represent its current invoice. See the [current release status](release-status-2026-10-16-web.md).
 
 ## Current configuration
 `OPENAI_MODEL=gpt-4.1-mini`; `INPUT_USD_PER_MILLION=0.40`, `OUTPUT_USD_PER_MILLION=1.60`.
