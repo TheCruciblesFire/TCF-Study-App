@@ -5,14 +5,13 @@ const read=p=>readFileSync(p,'utf8');
 test('landing screen offers two labeled accessible study choices',()=>{
  const html=read('public/index.html');
  assert.match(html,/data-study-mode="explore" aria-pressed="true"/);
- assert.match(html,/data-study-mode="guided" aria-pressed="false"/);
+ assert.match(html,/data-study-mode="blb" aria-pressed="false"/);
+ assert.doesNotMatch(html,/data-study-mode="guided"/);
  assert.match(html,/CHOOSE HOW YOU'D LIKE TO STUDY/);
 });
-test('guided selection automatically launches existing inductive steps while preserving normal chat',()=>{
+test('Ask and Learn preserves normal chat without launching the in-app guide',()=>{
  const ui=read('public/app.js');
- const guide=read('public/inductive-guide.js');
- assert.match(ui,/autoStart: studyMode === 'guided'/);
+ assert.doesNotMatch(ui,/autoStart: studyMode === 'guided'|createInductiveGuide/);
  assert.match(ui,/setStudyMode\('explore'\)/);
- assert.match(guide,/if \(autoStart\) begin\(\)/);
- assert.match(guide,/start\.addEventListener\('click', begin\)/);
+ assert.match(ui,/studyMode = mode === 'blb' \? 'blb' : 'explore'/);
 });
