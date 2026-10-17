@@ -28,7 +28,9 @@ test('pilot selects only the two bounded governing passages and uses BLB verse l
   assert.equal(john.blbUrl, 'https://www.blueletterbible.org/csb/jhn/15/4/');
   assert.equal(getCommentaryPilot('John 15:5'), null);
   assert.equal(john.blbTranslation, 'CSB');
+  assert.equal(john.sourceViewUrl, 'https://bible-strong.app/commentary/en/aquifer-fr/john/15');
   assert.deepEqual(getCommentaryPilot('Psalms 23').keywords, ['shepherd', 'need']);
+  assert.equal(getCommentaryPilot('Psalms 23').sourceViewUrl, 'https://bible-strong.app/commentary/en/aquifer-fr/ps/23');
   assert.equal(getCommentaryPilot('Psalms 23').id, 'TOSN-PSA-23-1');
   assert.equal(getCommentaryPilot('Psalms 23:2–4'), null);
   assert.equal(getCommentaryPilot('Romans 8:1'), null);
@@ -75,6 +77,7 @@ test('enabled pilot sends the bounded note to generation and returns an attribut
   const exported = formatStudyNotes({ study: answer, sources: [source], commentaryPilot: getCommentaryPilot('John 15:4') });
   assert.match(exported, /Adapted from Tyndale Open Study Notes/);
   assert.match(exported, /creativecommons\.org\/licenses\/by-sa\/4\.0/);
+  assert.match(exported, /bible-strong\.app\/commentary\/en\/aquifer-fr\/john\/15/);
   assert.doesNotMatch(exported, /Remain in me, and I in you/);
   assert.doesNotMatch(formatStudyNotes({ study: answer, sources: [source], csbPassage: { text: 'CSB LICENSED DISPLAY SENTINEL' } }), /CSB LICENSED DISPLAY SENTINEL/);
 });
