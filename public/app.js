@@ -96,10 +96,16 @@ function blbSearchUrl(criteria, translation = 'CSB') {
 function blbPassageUrl(value) {
   const url = new URL(value);
   if (url.protocol !== 'https:' || url.hostname !== 'www.blueletterbible.org' ||
-      !/^\/csb\/[a-z0-9]+\/\d+\/\d+\/?$/i.test(url.pathname)) throw Error('Invalid CSB passage link');
+      !/^\/(?:csb|kjv)\/[a-z0-9]+\/\d+\/\d+\/?$/i.test(url.pathname)) throw Error('Invalid Bible passage link');
+  url.pathname = url.pathname.replace(/^\/kjv\//i, '/csb/');
   return url.href;
 }
-function sourceCard(source, turnId, csbDisplayed = false) {
+function blbVerseToolsUrl(value) {
+  const url = new URL(blbPassageUrl(value));
+  url.pathname = `/verse${url.pathname}`;
+  return url.href;
+}
+function sourceCard(source, turnId) {
   const details = el('details', 'source-card'); details.id = `${turnId}-${source.id}`;
   const summary = el('summary'); summary.append(el('strong', '', `${source.reference} · ${source.translation}`), el('span', 'source-tag', source.role.toUpperCase()));
   const content = el('div', 'source-content');
@@ -108,11 +114,8 @@ function sourceCard(source, turnId, csbDisplayed = false) {
   if (source.selectionReason) content.append(el('p', 'source-disclosure', `Why this source: ${source.selectionReason}`));
   // Only server-constructed, allowlisted links. Model output never becomes a URL or HTML.
   try {
-    const url = new URL(source.url);
-    if (url.protocol === 'https:' && url.hostname === 'www.blueletterbible.org') {
-      const link = el('a', 'source-link', `Continue on Blue Letter Bible (${csbDisplayed ? 'CSB' : 'KJV'}) ↗`);
-      link.href = csbDisplayed ? blbPassageUrl(url.href.replace('/kjv/', '/csb/')) : url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
-    }
+    const link = el('a', 'source-link', 'Read this passage on Blue Letter Bible (CSB) ↗');
+    link.href = blbPassageUrl(source.url); link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
   } catch { /* Source text remains available if its external link is invalid. */ }
   details.append(summary, content); return details;
 }
@@ -203,11 +206,20 @@ function renderAnswer(answer, mount, turnId) {
     } catch { /* The attributed note remains available without the external link. */ }
     card.append(section);
   }
+  try {
+    const main = answer.sources[0];
+    const commentary = el('section', 'answer-section blb-commentary-handoff');
+    commentary.append(el('h3', '', 'Study this passage with BLB commentaries'));
+    const link = el('a', 'source-link', `Explore commentaries for ${main.reference} ↗`);
+    link.href = blbVerseToolsUrl(main.url); link.target = '_blank'; link.rel = 'noopener noreferrer';
+    commentary.append(link, el('p', 'source-disclosure', 'This opens the first verse in Blue Letter Bible’s tools. Choose Commentaries to browse the available text resources. BLB commentaries were not used to generate this answer.'));
+    card.append(commentary);
+  } catch { /* The study remains available if the external handoff URL is invalid. */ }
   const further = el('section', 'answer-section'); further.append(el('h3', '', 'Keep exploring'));
   const list = el('ul'); for (const question of answer.study.furtherStudy) list.append(el('li', '', question)); further.append(list); card.append(further);
   if (answer.study.caveat) card.append(el('p', 'study-caveat', answer.study.caveat));
   const sources = el('div', 'source-list'); sources.append(el('h3', '', 'READ THE SCRIPTURE · VERIFIED SOURCE SET'));
-  for (const source of answer.sources) sources.append(sourceCard(source, turnId, Boolean(answer.csbPassage)));
+  for (const source of answer.sources) sources.append(sourceCard(source, turnId));
   sources.append(el('p', 'source-disclosure', answer.mode === 'demo' ? 'Source base: curated KJV passages and prepared study notes. This is a demonstration, not a generated answer to every question.' : answer.csbPassage ? 'The CSB passage above is displayed from API.Bible but is not sent to OpenAI or copied into study notes. The public-domain WEB passage below is supplied to the AI. An attributed study-note summary informs the labeled insight. Blue Letter Bible was not consulted by the AI.' : 'The public-domain WEB passage is displayed from API.Bible and supplied to the AI for this study. Verify every explanation against the displayed passage. Linked resources were not consulted.'));
   if (answer.mode === 'live') {
     const attribution = el('p', 'source-disclosure', 'Scripture provided by ');
