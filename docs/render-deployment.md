@@ -1,30 +1,29 @@
 # Deploy the live TCF Study Assistant on Render
 
-The repository includes a [Render Blueprint](../render.yaml) for one Node web service with a 1 GB persistent disk. It runs live mode, keeps credentials on the server, and preserves conversation/rate-limit/cost records across restarts.
+The repository includes a [Render Blueprint template](../render.yaml) for a new Docker web service with a 10 GB persistent disk. The connected production service is named `TCF-Study-App`; it is not known to be Blueprint-managed. The template name `tcf-study-assistant` is intentionally different. Do not deploy this template in the current workspace to document the existing service, because doing so may create a second paid service. See the [current release status](release-status-2026-10-16-web.md) for observed production settings.
 
 [Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FTheCruciblesFire%2FTCF-Study-App)
 
-This configuration uses Render's **paid Starter service and persistent storage**. Review current Render pricing and the proposed resources before creating the service. This repository does not create a paid service automatically.
+The observed service runs Docker on Render's `0.5c-512mb` plan in Ohio with one instance, a 10 GB disk mounted at `/var/data/tcf`, and `/api/health` as its health check. It deploys `main` after checks pass. The Blueprint models these visible settings for recovery or a separate installation; it does not read or replace the existing service's secrets, disk data, or Blueprint linkage. Review current Render pricing and the proposed resources before creating another service.
 
 ## Create the service
 
 1. Sign in to the Render account that should own the ministry application.
-2. Open the deployment link above, or choose **New → Blueprint** and select `TheCruciblesFire/TCF-Study-App`, branch `main`.
+2. For a **new installation only**, open the deployment link above, or choose **New → Blueprint** and select `TheCruciblesFire/TCF-Study-App`, branch `main`. To adopt Blueprint management for the existing `TCF-Study-App` service, first generate its Blueprint from the Render dashboard and review the proposed sync diff; do not create a duplicate.
 3. If the repository is private, authorize Render's GitHub App for this repository. The Codex GitHub connection is separate from Render's connection.
-4. Review the one web service and 1 GB disk. During Blueprint creation, Render requests the three values marked `sync: false`:
+4. Review the proposed Docker web service and 10 GB disk. During Blueprint creation, Render requests the two credentials marked `sync: false`:
 
 | Name | Secure value to supply |
 | --- | --- |
 | `TCF_OPENAI_API_KEY` | A real OpenAI project API key with funded API billing and access to the selected model. |
 | `TCF_BIBLE_API_KEY` | Your API.Bible key with access to the public-domain WEB edition used by this application. |
-| `BIBLE_ID` | Set to `9879dbb7cfe39e4d-01`, API.Bible’s public-domain WEB ID. Confirm it is accessible to your key; live AI study rejects other IDs. |
 
-Enter keys only in Render's secret/environment fields. Never put them in GitHub, SnapPages, a ZIP, or chat. Codex's network-proxy secret bindings are specific to Codex; do not copy a proxy placeholder into Render. A ChatGPT Business subscription does not supply OpenAI API credits. Check the API project/organization that owns the key, independently of the ChatGPT workspace used to develop the app.
+The template sets public `BIBLE_ID=9879dbb7cfe39e4d-01`. Confirm the API.Bible key can access that edition; live AI study rejects other IDs. Enter keys only in Render's secret/environment fields. Never put them in GitHub, SnapPages, a ZIP, or chat. Codex's network-proxy secret bindings are specific to Codex; do not copy a proxy placeholder into Render. A ChatGPT Business subscription does not supply OpenAI API credits. Check the API project/organization that owns the key, independently of the ChatGPT workspace used to develop the app.
 
-5. Create the Blueprint. Render installs production dependencies and runs `npm start`.
+5. Create the Blueprint only after checking its name and cost. Render builds the repository `Dockerfile`, which installs production dependencies and runs `npm start`.
 6. Use the actual HTTPS URL shown by Render after deployment. The app automatically derives its public origin from `RENDER_EXTERNAL_URL`; no guessed hostname is hardcoded.
 
-The Blueprint pins Node 24.19.0, sets `APP_MODE=live`, uses `/var/data/tcf` for the persistent database/key, and sets estimated OpenAI limits of USD 2/day, USD 20/month and USD 0.03/turn. These exclude hosting and Bible API charges. `TRUST_PROXY_HOPS=1` assumes Render's reverse proxy is the nearest trusted hop; revisit it if adding another proxy/CDN.
+The `Dockerfile` pins Node 24.19.0. The template sets `APP_MODE=live`, WEB `BIBLE_ID`, `/var/data/tcf` for the persistent database/key, and estimated OpenAI limits of USD 2/day, USD 20/month and USD 0.03/turn. These exclude hosting and Bible API charges. `TRUST_PROXY_HOPS=1` is a template assumption about the nearest trusted proxy; its production value is not exposed by the connected Render tool. Revisit it if adding another proxy/CDN.
 
 ## Verify the service
 
@@ -83,4 +82,4 @@ The hosted app and a ZIP preview serve different purposes. The ZIP is a delibera
 
 GitHub Actions checks run without live credentials or paid calls. Render's `checksPass` setting permits subsequent automatic deploys after those checks pass. Keep one replica because active conversation locks are process-local. Persistent disks require the current instance to stop during deployment, so brief downtime is possible. The shutdown window allows in-flight requests to finish before termination.
 
-Render's dashboard validates and creates the Blueprint. No public service, successful Render build, or SnapPages publication is claimed until those steps actually complete. The local Blueprint and instructions were checked against Render's current Blueprint, environment-variable, Node-version and Deploy-to-Render documentation.
+The connected service and merged WEB release are described in the [current release status](release-status-2026-10-16-web.md). Render's live deploy status does not independently prove provider calls, FUMS submissions, or visitor browser acceptance. The operator reported that the live acceptance item passes. Preserve the last healthy deploy and persistent disk when rolling back; review the deployed code's expected Bible ID before selecting an older commit.
