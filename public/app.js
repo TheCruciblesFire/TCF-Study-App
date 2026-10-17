@@ -93,6 +93,12 @@ function blbSearchUrl(criteria, translation = 'CSB') {
   url.searchParams.set('t', translation);
   return url.href;
 }
+function blbPassageUrl(value) {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.hostname !== 'www.blueletterbible.org' ||
+      !/^\/csb\/[a-z0-9]+\/\d+\/\d+\/?$/i.test(url.pathname)) throw Error('Invalid CSB passage link');
+  return url.href;
+}
 function sourceCard(source, turnId, csbDisplayed = false) {
   const details = el('details', 'source-card'); details.id = `${turnId}-${source.id}`;
   const summary = el('summary'); summary.append(el('strong', '', `${source.reference} · ${source.translation}`), el('span', 'source-tag', source.role.toUpperCase()));
@@ -105,7 +111,7 @@ function sourceCard(source, turnId, csbDisplayed = false) {
     const url = new URL(source.url);
     if (url.protocol === 'https:' && url.hostname === 'www.blueletterbible.org') {
       const link = el('a', 'source-link', `Continue on Blue Letter Bible (${csbDisplayed ? 'CSB' : 'KJV'}) ↗`);
-      link.href = csbDisplayed ? blbSearchUrl(source.reference) : url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
+      link.href = csbDisplayed ? blbPassageUrl(url.href.replace('/kjv/', '/csb/')) : url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
     }
   } catch { /* Source text remains available if its external link is invalid. */ }
   details.append(summary, content); return details;
@@ -146,8 +152,11 @@ function renderAnswer(answer, mount, turnId) {
     reading.append(el('h3', '', `${passage.reference} · Christian Standard Bible`),
       el('p', 'scripture-text', passage.text), el('p', 'copyright', passage.copyright));
     const handoff = el('a', 'source-link', 'Study this passage further in Blue Letter Bible (CSB) ↗');
-    handoff.href = blbSearchUrl(passage.reference); handoff.target = '_blank'; handoff.rel = 'noopener noreferrer';
-    reading.append(handoff, el('p', 'source-disclosure', 'CSB is displayed for reading. The AI study below uses the public-domain World English Bible (WEB).'));
+    try {
+      handoff.href = blbPassageUrl(passage.url); handoff.target = '_blank'; handoff.rel = 'noopener noreferrer';
+      reading.append(handoff);
+    } catch { /* Keep the CSB reading available if the external URL is invalid. */ }
+    reading.append(el('p', 'source-disclosure', 'CSB is displayed for reading. The AI study below uses the public-domain World English Bible (WEB).'));
     card.append(reading);
   }
   const sections = [['Passage & context', [answer.study.context]], ['Observe the text', answer.study.observations], ['Understand in context', answer.study.interpretation], ['Theological conclusions', answer.study.theology], ['Christ & the wider story', answer.study.connections], ['Put it into practice', answer.study.application]];
@@ -165,11 +174,16 @@ function renderAnswer(answer, mount, turnId) {
     section.append(el('h3', '', 'A study note to consider'), el('p', '', answer.study.commentaryInsight.text));
     const credit = el('p', 'source-disclosure', 'AI summary adapted from ');
     const original = el('a', 'source-link', note.title);
-    original.href = note.sourceUrl; original.target = '_blank'; original.rel = 'noopener noreferrer';
+    original.href = note.sourceViewUrl; original.target = '_blank'; original.rel = 'noopener noreferrer';
+    original.textContent = `${note.title} for ${note.reference} ↗`;
     const license = el('a', 'source-link', note.license);
     license.href = note.licenseUrl; license.target = '_blank'; license.rel = 'noopener noreferrer';
     credit.append(original, document.createTextNode('. ' + note.copyright + ' · '), license);
     section.append(credit);
+    const publisher = el('a', 'source-link', 'Publisher downloads ↗');
+    publisher.href = note.sourceUrl; publisher.target = '_blank'; publisher.rel = 'noopener noreferrer';
+    section.append(el('p', 'source-disclosure', 'Read the linked chapter notes on Bible Strong, which republishes Tyndale’s notes. '));
+    section.lastElementChild.append(publisher);
     const noteDetails = el('details', 'commentary-source');
     noteDetails.append(el('summary', '', 'See the source summary sent to the assistant'), el('p', '', note.text));
     section.append(noteDetails);
