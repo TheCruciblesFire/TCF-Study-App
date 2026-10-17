@@ -2,7 +2,7 @@
 
 Checks performed on October 15, 2026. No keys, usage tokens, provider response bodies or visitor conversations are included in this report.
 
-This is a historical verification record. See the [October 16 release-readiness record](release-readiness-2026-10-16.md) for subsequent availability checks, completed automated validation, and the remaining production acceptance gates.
+This is a historical verification record. See the [October 16 release-readiness record](release-readiness-2026-10-16.md) for subsequent availability checks and the [current release status](release-status-2026-10-16-web.md) for the deployed WEB flow and operator-reported acceptance.
 
 | Check | Outcome | Practical limit |
 | --- | --- | --- |

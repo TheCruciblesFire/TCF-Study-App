@@ -1,5 +1,7 @@
 # TCF Study App — Release readiness, October 16, 2026
 
+> Historical pre-WEB checkpoint. For the merged WEB release, connected Render configuration, and operator-reported acceptance, see the [current release status](release-status-2026-10-16-web.md). The older CSB permission and Render access items below describe the state at this checkpoint.
+
 The existing service is available, but general-public release acceptance and Phase 9 lexical integration remain gated. This record distinguishes automated and public read-only checks from production operations that still need access or independent evidence.
 
 ## Merged changes

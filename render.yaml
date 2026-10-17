@@ -1,21 +1,22 @@
+# New-service template. The existing TCF-Study-App Render service is not known to be Blueprint-managed.
+# Review the proposed resources before deploying or attaching this file to an existing service.
 services:
   - type: web
     name: tcf-study-assistant
-    runtime: node
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     branch: main
-    plan: starter
+    region: ohio
+    plan: 0.5c-512mb
     numInstances: 1
-    buildCommand: npm ci --omit=dev --no-audit --no-fund
-    startCommand: npm start
     healthCheckPath: /api/health
     autoDeployTrigger: checksPass
     disk:
-      name: tcf-study-data
+      name: disk
       mountPath: /var/data/tcf
-      sizeGB: 1
+      sizeGB: 10
     envVars:
-      - key: NODE_VERSION
-        value: 24.19.0
       - key: NODE_ENV
         value: production
       - key: APP_MODE
@@ -32,9 +33,9 @@ services:
         value: '20'
       - key: MAX_TURN_USD
         value: '0.03'
+      - key: BIBLE_ID
+        value: '9879dbb7cfe39e4d-01'
       - key: TCF_OPENAI_API_KEY
         sync: false
       - key: TCF_BIBLE_API_KEY
-        sync: false
-      - key: BIBLE_ID
         sync: false
